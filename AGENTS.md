@@ -1,0 +1,5 @@
+# 共通運用ルール
+
+このリポジトリの目的は les の観測可能な意味論の推定と Lean 形式化。作業開始時は `tasks/next.md`、必要なときだけ `PLAN.md` を参照。固定 upstream SHA は `upstream/LES_COMMIT`。
+
+観測結果、実装根拠、推測を区別し、作業は小さく区切る。まず Go CLI の差分テストと再現性を確保する。Lean の証明、全面的な型推論、全ソース調査へ先走らない。失敗は最小例と根拠を `tasks/results/` に記録。GitHub への push は明示的な許可を得る。

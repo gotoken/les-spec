@@ -1,0 +1,7 @@
+/.work/
+/.claude/settings.local.json
+/lean/.lake/
+/lean/build/
+/lean/*.olean
+*.swp
+.DS_Store

@@ -11,7 +11,7 @@ Go 実装の逐語移植ではありません。Lean モデルについての証
 - 式6種類・文3種類の限定構文について Go / Lean の観測結果 **35件 PASS**、Lean 個別テスト **41件 PASS**（各工程の実行記録による）
 - Lean モデルに対する Heap 操作、Thunk のメモ化、環境捕捉と前方参照、構造的 Heap 整合性、Cell 数単調性の証明
 - P2d-5 の成功時メモ化統合定理 [PR #19](https://github.com/gotoken/les-spec/pull/19) まで main に反映済み
-- [PR #20](https://github.com/gotoken/les-spec/pull/20) で具体例による非空虚性の定理を [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) に追加（**マージ・ビルド確認前**）
+- [PR #20](https://github.com/gotoken/les-spec/pull/20) で具体例による非空虚性の定理を [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) に追加（main にマージ済み。初回のビルド失敗は [PR #22](https://github.com/gotoken/les-spec/pull/22) で修正し CI で検証済み）
 
 詳細は **[P0〜P2d-5 の成果と証明範囲](docs/proof-coverage.md)**、進め方を変えた理由と今後の仮の工程は **[PLAN.md](PLAN.md)** を参照してください。
 
@@ -54,6 +54,6 @@ lake exe les-eval-test ../lesdump/golden ../difftest/corpus
 
 ## 次の作業について
 
-次の言語機能追加・証明対象はまだ確定していません。[成果と証明範囲](docs/proof-coverage.md) と P2d-5 の非空虚性証明をレビューし、PR #20 のビルドを確認したうえで次のタスクを決めます。
+次の言語機能追加・証明対象はまだ確定していません。[成果と証明範囲](docs/proof-coverage.md) と P2d-5 の非空虚性証明をレビューし、PR #22 の修正と CI の検証結果を確認したうえで次のタスクを決めます。
 
 無断で次フェーズに着手せず、一つのタスクごとに実行、検証、記録、レビューを行います。モデル利用量が取れなかった工程は「未計測」とします。

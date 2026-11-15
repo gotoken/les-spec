@@ -107,7 +107,7 @@
 
 **この証人は「条件を満たす例が存在する」ことの確認であり、すべての `demand` が成功するという主張ではない。** また、`StructWF` は Cell 内部の参照までを含む完全な Heap 整合性ではない。
 
-**検証状態:** 新規ファイルは PR #20 に追加済みだが、ここでの `lake build` / `#print axioms` の独立した実行は未確認。マージ前にビルドとアクシオム確認を行う。
+**検証記録（2026-11-15）:** PR #20 は main にマージ済みだったが、初回の `lake build` は `memoWitness_demand_ok` の `rfl` が失敗した。修正は [PR #22](https://github.com/gotoken/les-spec/pull/22) にあり、[GitHub Actions 実行](https://github.com/gotoken/les-spec/actions/runs/43715079526) にて Lean 4.25.0 の `lake build` が成功した。新定理の `#print axioms` には `propext` / `Quot.sound` のみ（`sorryAx` なし）。この修正は PR #22 のマージ後に main に反映される。
 
 ## 4. 依存関係
 
@@ -145,9 +145,9 @@ P2c の環境捕捉と P2d のアドレス有効性は、現時点では**別の
 
 ### 最初に行う監査
 
-1. **非空虚性（PR #20 で証人を追加、ビルド要確認）:** P2d-5 の前提 `h` と `hd` を同時に満たす具体的な `Machine` / `Expr` / `Env` / fuel を [`NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) に構成した。マージ前に Lean カーネルによるコンパイルと `#print axioms` を確認する。
+1. **非空虚性（証人を追加・PR #22 で修正済み）:** P2d-5 の前提 `h` と `hd` を同時に満たす具体的な `Machine` / `Expr` / `Env` / fuel を [`NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) に構成した。元の `rfl` の失敗を PR #22 で修正し、CI で Lean のコンパイルと `#print axioms` を確認した。
 2. **対応関係の検査:** 実行器に一時的な意味論の改変を加えた場合、対応する差分テストや定理がどこで検出するかを確認する。証明の前提が自明になっていないかも点検する。
-3. **定理の再現性:** PR #19 は main にマージ済み。PR #20 の証人を含め、fresh clone / pinned Lean toolchain で `lake build`、35件比較、41件個別テスト、`#print axioms whnf_suspended_ok_memo_nonvacuous` を実行し、記録する。
+3. **定理の再現性:** PR #19 / #20 は main にマージ済み。PR #22 の修正ブランチを用いて GitHub Actions 上の Lean 4.25.0 で `lake build`、35件比較と個別テスト、`#print axioms` が成功した。ローカルでの fresh clone 再現と Go CLI のオラクル実行は別途確認する。
 
 ### 意味論の次の問い
 

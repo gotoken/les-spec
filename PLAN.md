@@ -1,6 +1,6 @@
 # 計画: les の観測意味論から Lean 形式化へ
 
-> **2026-11-15 改訂:** 当初 P2 に置いた機能追加よりも、P1 で動いた小さな評価器に対する形式的な証明を優先した。旧計画はこの改訂の履歴として明記する。P0〜P2d-5 は main に反映済み（統合定理の [PR #19](https://github.com/gotoken/les-spec/pull/19) もマージ済み）。[PR #20](https://github.com/gotoken/les-spec/pull/20) で非空虚性を示す証人を追加したが、こちらはまだ未マージ。到達点の詳しい範囲は [P0〜P2d-5 成果と証明の適用範囲](docs/proof-coverage.md) を参照。
+> **2026-11-15 改訂:** 当初 P2 に置いた機能追加よりも、P1 で動いた小さな評価器に対する形式的な証明を優先した。旧計画はこの改訂の履歴として明記する。P0〜P2d-5 は main に反映済み（統合定理の [PR #19](https://github.com/gotoken/les-spec/pull/19) もマージ済み）。[PR #20](https://github.com/gotoken/les-spec/pull/20) も main にマージ済み。ただし初回ビルドで証明に問題が見つかり、[PR #22](https://github.com/gotoken/les-spec/pull/22) で修正した（CI 成功・未マージ）。到達点の詳しい範囲は [P0〜P2d-5 成果と証明の適用範囲](docs/proof-coverage.md) を参照。
 
 ## 計画変更の履歴と理由
 
@@ -70,9 +70,9 @@ P2 の完了を主張する際には **`docs/proof-coverage.md` の適用範囲�
 
 ### P2 の振り返り・監査（次の作業候補、未着手）
 
-1. P2d-5 の `h`・`hd` を同時に満たす**具体的な証人**を [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) に追加した（PR #20）。**Lean のビルド・公理確認はマージ前に実施する**。
+1. P2d-5 の `h`・`hd` を同時に満たす**具体的な証人**を [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) に追加した（PR #20）。**初回ビルド失敗を PR #22 で修正し、GitHub Actions にてビルド・公理確認成功**。
 2. E1〜E22 のどの規則がオラクルで観測されたか、どこが Lean の全称定理になったかを点検する（[成果文書](docs/proof-coverage.md)）。
-3. PR #19 はマージ済み。PR #20 の非空虚性証明も含めて fresh clone でビルド、35件比較、41件個別テスト、`#print axioms` を再確認する。
+3. PR #19 / #20 はマージ済み。PR #22 の修正ブランチで CI による `lake build`、35件比較と個別テスト、`#print axioms` を確認済み。ローカル fresh clone の再現確認は別途行う。
 4. 次の証明対象として、失敗時の Thunk / blackhole の状態、Cell 内部参照の整合性と評価器による保存性を検討する。
 
 この節は**候補であり作業着手の指示ではない**。次に何を行うかはレビュー後に決める。

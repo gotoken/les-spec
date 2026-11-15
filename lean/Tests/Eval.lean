@@ -19,14 +19,14 @@ def stageA : List String := [
 
 structure Expect where
   stdout : String
-  stderr : Option String
+  stderr : String
   exitCode : Int
 
 def parseExpect (text : String) : Except String Expect := do
   let j ← Json.parse text
   let stdout ← j.getObjValAs? String "stdout"
   let exitCode ← j.getObjValAs? Int "exit_code"
-  let stderr := (j.getObjValAs? String "stderr").toOption
+  let stderr ← j.getObjValAs? String "stderr"
   return { stdout, stderr, exitCode }
 
 inductive Res where
@@ -36,7 +36,7 @@ def judge (e : Expect) : Verdict → Res
   | .observed o =>
     let bad := (if o.stdout != e.stdout then ["stdout"] else []) ++
       (if o.exitCode != e.exitCode then ["exit_code"] else []) ++
-      (match e.stderr with | some s => if s != o.stderr then ["stderr"] else [] | none => [])
+      (if e.stderr != o.stderr then ["stderr"] else [])
     if bad.isEmpty then .pass
     else .fail s!"{bad} lean={repr o} expected stdout={repr e.stdout} stderr={repr e.stderr} exit={e.exitCode}"
   | .unsupported w => .unsupported w
@@ -85,6 +85,11 @@ def isDoneInt (c : Option Cell) (i : Int) : Bool :=
 
 def unitTests (t : T) : IO Unit := do
   IO.println "== unit tests =="
+  -- 期待値の stderr 欠落は FAIL（stderr は必須。暗黙に照合を省かない）。
+  t.check "expect.json without stderr is rejected"
+    (match parseExpect "{\"stdout\": \"\", \"exit_code\": 0}" with | .error _ => true | .ok _ => false)
+  t.check "expect.json with stderr is accepted"
+    (match parseExpect "{\"stdout\": \"\", \"stderr\": \"\", \"exit_code\": 0}" with | .ok _ => true | .error _ => false)
   -- (1) Heap 共有・メモ化: 副作用つき Thunk は何度要求しても 1 回だけ実行される（E9）。
   let (o, m) := runMachine 100 (mkProg [
     assign "x" (printE [sStr "s;"]), stmtE (ident "x"), stmtE (ident "x"), stmtE (ident "x")])

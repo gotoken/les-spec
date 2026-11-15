@@ -55,6 +55,17 @@ def main():
             r = run(f)
             if r.returncode != 2 or needle not in r.stderr or r.stdout:
                 failures.append(f"{name}: expected exit 2 with {needle!r}, got {r.returncode} {r.stderr.strip()!r}")
+        # Regression (review P2): a short relative file name that also occurs in a diagnostic
+        # ("Int" in "expected Int, got String") must not change the output or the message text.
+        src_text = 'def f(x: Int): Int:\n    x\n\nprint f("a")\n'
+        (pathlib.Path(d) / "Int").write_text(src_text, encoding="utf-8")
+        (pathlib.Path(d) / "abs.les").write_text(src_text, encoding="utf-8")
+        rel = subprocess.run([str(BIN), "Int"], capture_output=True, text=True, cwd=d)
+        ab = run(pathlib.Path(d) / "abs.les")
+        if rel.returncode != 0 or rel.stdout != ab.stdout:
+            failures.append("relative file name 'Int' gives different JSON than absolute path")
+        if "expected Int, got String" not in rel.stdout:
+            failures.append("diagnostic text was rewritten (expected 'expected Int, got String')")
         # Type errors are reported in analysis (as the CLI does), with the path scrubbed.
         f = pathlib.Path(d) / "typeerr.les"
         f.write_text('def f(x: Int): Int:\n    x\n\nprint f("a")\n', encoding="utf-8")

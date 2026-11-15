@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"les/pkg/ast"
 	"les/pkg/lexer"
@@ -17,6 +16,8 @@ import (
 )
 
 const schemaVersion = 1
+
+const diagFilename = "<FILE>"
 
 type obj = map[string]any // encoding/json sorts map keys, so output is deterministic.
 
@@ -142,7 +143,9 @@ func run(path string) (obj, int, error) {
 	}
 	l := lexer.NewLexer(string(src))
 	p := parser.NewParser(l)
-	p.SetFilename(path)
+	// A fixed diagnostic file name (carried to InferProgram via prog.Filename) keeps output
+	// independent of how the file is addressed, without rewriting message text.
+	p.SetFilename(diagFilename)
 	prog := p.ParseProgram()
 	if errs := p.Errors(); len(errs) > 0 {
 		return nil, 2, fmt.Errorf("syntax error: %v", errs)
@@ -157,17 +160,15 @@ func run(path string) (obj, int, error) {
 
 	// Same type-inference pass as the upstream CLI (cmd/les/main.go), without a module loader:
 	// import/module statements are unsupported above, so none can be reached.
-	// The file path is replaced by "<FILE>" so that output does not depend on where the file lives.
-	scrub := func(msg string) string { return strings.ReplaceAll(msg, path, "<FILE>") }
 	analysis := obj{"status": "ok", "type_error": "", "type_warnings": []any{}}
 	inf := types.NewInferencer()
 	if err := inf.InferProgram(prog); err != nil {
 		analysis["status"] = "type_error"
-		analysis["type_error"] = scrub(fmt.Sprint(err))
+		analysis["type_error"] = fmt.Sprint(err)
 	} else {
 		warns := []any{}
 		for _, w := range inf.Warnings() {
-			warns = append(warns, scrub(fmt.Sprint(w)))
+			warns = append(warns, fmt.Sprint(w))
 		}
 		analysis["type_warnings"] = warns
 	}

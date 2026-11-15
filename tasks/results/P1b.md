@@ -10,7 +10,7 @@
 
 - upstream の `pkg/lexer` / `pkg/parser` / `pkg/types` を `replace les => ../.work/upstream-les` で再利用（パーサーは独自実装していない）。CLI と同じ `Inferencer.InferProgram` を通し、結果は `analysis`（`ok` / `type_error` と警告）に入れる。式ごとの型は出力していない。
 - 対応ノード: `ExprStmt`, `VarDecl`, `FuncDef`（型パラメータ・`&block`・既定値・可変長なし）, `Ident`, `Int`, `String`, `Binary`, `Force`, `Call`。それ以外は stderr にメッセージを出して exit 2。形式の詳細は `lesdump/README.md`。
-- 出力はキー順固定・パスなし（型エラー文中のパスは `<FILE>`）。`schema_version` は 1。
+- 出力はキー順固定・パスなし（診断用ファイル名は `parser.SetFilename("<FILE>")` で固定。メッセージ本文は書き換えない）。`schema_version` は 1。
 
 ## 成功したコマンド（終了コード）
 
@@ -31,7 +31,7 @@
 
 ## 失敗と修正
 
-- テスト中に 2 回、自分の実装の不備を直した（いずれも 1 回で解消）: (1) 型エラー文に絶対パスが入って決定的でない問題を `<FILE>` 置換で解消、(2) JSON の `<`/`>` が `<` にエスケープされる問題を `SetEscapeHTML(false)` で解消。
+- テスト中に 2 回、自分の実装の不備を直した（いずれも 1 回で解消）: (1) 型エラー文に絶対パスが入って決定的でない問題を解消（当初は文字列置換、レビュー指摘 P2 を受けて固定ファイル名方式に変更）、(2) JSON の `<`/`>` が `<` にエスケープされる問題を `SetEscapeHTML(false)` で解消。
 - 同じ失敗への修正が 3 回に達したものは無し。upstream のソースは変更していない。
 
 ## モデル利用
@@ -51,3 +51,7 @@
 ## 次の一つのタスク候補
 
 P1c: `lesdump` の JSON を読む Lean 側の `Les.Syntax`（AST 型と JSON デコード）を作り、golden 10 件を読み込めることを確認する。評価器にはまだ進まない。
+
+## レビュー対応（Codex P2、ユーザー指示で修正）
+
+`strings.ReplaceAll(msg, path, "<FILE>")` は、入力ファイル名が `Int` のような短い名前のとき、診断文の `expected Int, got String` まで書き換える（再現済み）。`parser.SetFilename("<FILE>")` で最初から固定名にする方式に変更し、置換処理を削除した（`prog.Filename` が `InferProgram` に伝わることを `pkg/types/infer.go` 1370 行で確認）。回帰テスト: 同じ型エラーのソースを相対名 `Int` と絶対パスで実行し、JSON がバイト単位で一致し `expected Int, got String` が保たれることを `lesdump/test.py` で検証。golden 10 件は変更なし、`python3 lesdump/test.py` と difftest 10/10 は PASS、`go vet` / `go build` は成功（Go のテストファイルは無い）。

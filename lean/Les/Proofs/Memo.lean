@@ -1,5 +1,6 @@
 import Les.Eval.Eval
 import Les.Proofs.Heap
+import Les.Proofs.MonotoneEval
 
 /-
 P2b-1: 評価済み Cell を `whnf` で再強制しても何も変わらない（安定性）。
@@ -173,5 +174,45 @@ theorem whnf_suspended_ok_then_stable (n k : Nat) (a : Addr) (e : Expr) (env : E
     (hrun : ((whnf (n + 1) a).run).run m = (Except.ok v, m₃)) :
     ((whnf (k + 1) a).run).run m₃ = (Except.ok v, m₃) :=
   whnf_done k a v m₃ (whnf_suspended_ok_cell n a e env m m₂ m₃ v h hd hvalid hrun)
+
+/-! ## P2d-4: `hvalid` の導出（P2d-3 の `demand_validAddr` から）
+
+`demand` 終了後のアドレスの有効性は、`demand` の Cell 数単調性（P2d-3）から出る。
+`demand` が正常終了すること自体は保証しない（`hd` が残る仮定）。 -/
+
+/-- 1. `suspended` な Cell のアドレスは、`blackholed` 後の Machine でも有効（`setCell` は Cell 数を変えない）。 -/
+theorem Machine.blackholed_validAddr (m : Machine) (a : Addr) (e : Expr) {env : Env}
+    (h : m.heap.cell? a = some (.suspended e env)) :
+    (m.blackholed a e).heap.ValidAddr a :=
+  Heap.setCell_validAddr m.heap a (.blackhole e) (Heap.valid_of_cell?_some h)
+
+/-- 2. `demand` が `m.blackholed a e` から `m₂` で終了したなら（正常終了でも例外でも）`m₂` で `a` は有効。
+    `hd` は結果の形を問わず、最終状態が `m₂` であることだけを使う。 -/
+theorem demand_blackholed_validAddr (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ : Machine)
+    {r : Except Halt Value} (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (r, m₂)) :
+    m₂.heap.ValidAddr a := by
+  have := demand_validAddr n e env (m.blackholed a e) (m.blackholed_validAddr a e h)
+  rw [hd] at this
+  exact this
+
+/-- 3. `hvalid` なしの `whnf_suspended_ok_cell`。残る仮定は初期 Cell が `suspended` であることと、
+    `demand` が `ok v` で終了したこと（`hd`）、および `whnf` の実行結果（`hrun`）だけ。 -/
+theorem whnf_suspended_ok_cell_valid (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ m₃ : Machine)
+    (v : Value) (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂))
+    (hrun : ((whnf (n + 1) a).run).run m = (Except.ok v, m₃)) :
+    m₃.heap.cell? a = some (.done v) :=
+  whnf_suspended_ok_cell n a e env m m₂ m₃ v h hd
+    (demand_blackholed_validAddr n a e env m m₂ h hd) hrun
+
+/-- 4. `hvalid` なしの `whnf_suspended_ok_then_stable`。 -/
+theorem whnf_suspended_ok_then_stable_valid (n k : Nat) (a : Addr) (e : Expr) (env : Env)
+    (m m₂ m₃ : Machine) (v : Value) (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂))
+    (hrun : ((whnf (n + 1) a).run).run m = (Except.ok v, m₃)) :
+    ((whnf (k + 1) a).run).run m₃ = (Except.ok v, m₃) :=
+  whnf_suspended_ok_then_stable n k a e env m m₂ m₃ v h hd
+    (demand_blackholed_validAddr n a e env m m₂ h hd) hrun
 
 end Les.Eval

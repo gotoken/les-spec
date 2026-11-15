@@ -1,0 +1,4 @@
+def choose(first: Int, second: Int): Int:
+    first
+
+print choose(42, 1 / 0)

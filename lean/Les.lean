@@ -6,6 +6,7 @@ import Les.Syntax
 import Les.Eval.Eval
 import Les.Eval.Observe
 import Les.Proofs.Heap
+import Les.Proofs.Memo
 
 namespace Les
 

@@ -29,10 +29,38 @@ def memoWitnessMachine : Machine :=
 
 def memoWitnessAddr : Addr := (Heap.initial.alloc memoWitnessCell).2
 
-/-- `demand` の実際の終了状態。結果の `ok` は次の定理で独立に確認する。 -/
+/-- 整数リテラルの `demand 2` は `done` Cell を割り当て、その値を返す。
+    `rfl` で状態全体を計算する代わりに、割当直後の Cell と `whnf_done`
+    から成功を示す。具体例だけでなく任意の初期 Machine に対して成立する。 -/
+private theorem demand_int_ok (m : Machine) (p : Pos) (i : Int) (env : Env) :
+    ((demand 2 (.int p i) env).run).run m =
+      (Except.ok (.int i), { m with heap := (m.heap.alloc (.done (.int i))).1 }) := by
+  let a : Addr := (m.heap.alloc (.done (.int i))).2
+  let m' : Machine := { m with heap := (m.heap.alloc (.done (.int i))).1 }
+  have heval :
+      ((evalE 1 (.int p i) env).run).run m = (Except.ok a, m') := by
+    rfl
+  have hcell : m'.heap.cell? a = some (.done (.int i)) := by
+    simpa only [m', a] using Heap.alloc_cell?_new m.heap (.done (.int i))
+  have hwhnf : ((whnf 1 a).run).run m' = (Except.ok (.int i), m') :=
+    whnf_done 0 a (.int i) m' hcell
+  have hbody :
+      (((evalE 1 (.int p i) env >>= fun b => whnf 1 b).run).run m) =
+        (Except.ok (.int i), m') := by
+    rw [run_bind_ok (evalE 1 (.int p i) env) (fun b => whnf 1 b) m m' a heval]
+    exact hwhnf
+  change
+    ((ExceptT.tryCatch (evalE 1 (.int p i) env >>= fun b => whnf 1 b)
+      (fun h : Halt => throw (h.attach p))).run).run m =
+      (Except.ok (.int i), m')
+  simp only [ExceptT.tryCatch, ExceptT.run, ExceptT.mk, StateT.run_bind]
+  rw [hbody]
+  rfl
+
+/-- `demand` の具体的な終了状態（初期 Heap に整数値 42 の `done` Cell を追加）。 -/
 def memoWitnessAfterDemand : Machine :=
-  (((demand 2 memoWitnessExpr memoWitnessEnv).run).run
-    (memoWitnessMachine.blackholed memoWitnessAddr memoWitnessExpr)).2
+  let m := memoWitnessMachine.blackholed memoWitnessAddr memoWitnessExpr
+  { m with heap := (m.heap.alloc (.done (.int 42))).1 }
 
 /-- 初期 Cell は確かに `suspended`。P2a の割当補題を再利用する。 -/
 theorem memoWitness_suspended :
@@ -45,12 +73,14 @@ theorem memoWitness_structWF : memoWitnessMachine.heap.StructWF :=
   Heap.alloc_structWF Heap.initial memoWitnessCell Heap.initial_structWF
 
 /-- 実際の評価器で `demand 2` が `ok (.int 42)` で終了する。
-    `rfl` は `evalE` による `done` Cell の割当と `whnf` をそのまま計算する。 -/
+    上の `demand_int_ok` と、独立に記述した最終状態の定義で示す。 -/
 theorem memoWitness_demand_ok :
     ((demand 2 memoWitnessExpr memoWitnessEnv).run).run
       (memoWitnessMachine.blackholed memoWitnessAddr memoWitnessExpr) =
         (Except.ok (.int 42), memoWitnessAfterDemand) := by
-  rfl
+  simpa only [memoWitnessExpr, memoWitnessAfterDemand] using
+    demand_int_ok (memoWitnessMachine.blackholed memoWitnessAddr memoWitnessExpr)
+      { line := 1, col := 1 } 42 memoWitnessEnv
 
 /-- P2d-5 の2前提を同時に満たす具体的な証人が存在する。
     さらに初期 Heap は `StructWF` を満たすので、恣意的な壊れた Heap ではない。 -/

@@ -1,6 +1,6 @@
 name = "les"
 version = "0.1.0"
-defaultTargets = ["Les", "les-syntax-test"]
+defaultTargets = ["Les", "les-syntax-test", "les-eval-test"]
 
 [[lean_lib]]
 name = "Les"
@@ -8,3 +8,7 @@ name = "Les"
 [[lean_exe]]
 name = "les-syntax-test"
 root = "Tests.Main"
+
+[[lean_exe]]
+name = "les-eval-test"
+root = "Tests.Eval"

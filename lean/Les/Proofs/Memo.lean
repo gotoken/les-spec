@@ -3,9 +3,12 @@ import Les.Proofs.Heap
 import Les.Proofs.MonotoneEval
 
 /-
-P2b-1: 評価済み Cell を `whnf` で再強制しても何も変わらない（安定性）。
-対象は `Les/Eval/Eval.lean` の既存の `whnf`。未評価（`suspended`）Cell を最初に強制する場合の
-一般的な正しさ（メモ化の書き込みなど）は P2b-2 の対象で、ここでは扱わない。
+P2b-1/2 の `whnf` の基本性質から、P2d-4 のアドレス有効性の導出、
+P2d-5 の初回強制・メモ化・再強制の統合定理までを収める。
+対象は `Les/Eval/Eval.lean` の実際の `whnf` であり、証明用の別実装ではない。
+P2b-2 当時は一部で `hvalid` を仮定していたが、P2d-3/4 でその仮定を導出した。
+最終的な `whnf_suspended_ok_memo` は `hvalid` と `hrun` を外部仮定にしない。
+ただし `demand` の成功自体は `hd` で仮定しており、失敗後のメモ化は対象外。
 `sorry` / `admit` / 新たな公理は使わない。
 -/
 namespace Les.Eval
@@ -61,8 +64,10 @@ theorem whnf_done_twice (n k : Nat) (a : Addr) (v : Value) (m : Machine)
 
 /-! ## P2b-2: 未評価 Cell の初回強制とブラックホール
 
-`demand`（任意の評価）がアドレスの有効性や Heap の整合性を保存することは**仮定しない**。
-必要な箇所では「`demand` の実行結果」と「その時点でアドレスが有効」を明示的な仮定にする。 -/
+この節の元の定理は、`demand` の結果と必要に応じて最終状態でのアドレス有効性を
+明示的な仮定として扱う。後の P2d-3/4 で `demand_validAddr` が証明され、
+有効性を外部から仮定しない強化版を同じファイルの末尾に追加した。
+Heap 全体の整合性保存や `demand` の成功は主張しない。 -/
 
 /-- Cell が `some` ならアドレスは有効。 -/
 theorem Heap.valid_of_cell?_some {h : Heap} {a : Addr} {c : Cell} (hc : h.cell? a = some c) :
@@ -153,7 +158,8 @@ theorem whnf_suspended_ok (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ : 
 
 /-- 4'. 成功した初回強制の後、対象アドレスの Cell は `done v`。書き込みが実際に起きる条件として、
     `demand` 終了後の状態 `m₂` でアドレスが有効であること（`hvalid`）を**仮定**する
-    （`demand` が有効性を保存することは証明していない）。 -/
+    （P2b-2 当時の条件付き補題。P2d-4 の `whnf_suspended_ok_cell_valid` は、
+    `demand_validAddr` を使ってこの `hvalid` を導出する）。 -/
 theorem whnf_suspended_ok_cell (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ m₃ : Machine)
     (v : Value) (h : m.heap.cell? a = some (.suspended e env))
     (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂))

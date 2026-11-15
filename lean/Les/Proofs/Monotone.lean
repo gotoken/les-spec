@@ -3,7 +3,8 @@ import Les.Proofs.Heap
 
 /-
 P2d-2: `cells.size` の非減少性のための基本補題。対象は既存の `Heap` 操作と `EvalM` の基本操作。
-`demand` / `evalE` / `whnf` の再帰全体の単調性はここでは扱わない（次の工程で、この補題を組み合わせる）。
+`demand` / `evalE` / `whnf` の再帰全体の単調性はこのファイルでは扱わず、
+P2d-3 の `MonotoneEval.lean` でこれらの補題を組み合わせて証明済み。
 `sorry` / `admit` / 新たな公理は使わない。
 -/
 namespace Les.Eval

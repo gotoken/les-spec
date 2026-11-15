@@ -1,9 +1,10 @@
 import Les.Syntax
 
 /-
-段階 A の評価器のデータ型（docs/evaluator-design.md 3 節）。
-設計メモからの差分は `Halt.unsupported` の追加だけ（未対応の機構に当たったことを
-「エラー」と区別して報告するため。比較では PASS にならない）。
+P1c-4 の段階 A で導入し、P1c-5 の段階 B でも利用する評価器のデータ型
+（docs/evaluator-design.md 3 節）。
+`Halt.unsupported` は、現在も評価器が扱わない演算・呼び出し等を通常の実行時エラーと区別する。
+差分テストでは UNSUPPORTED は PASS にならない。
 -/
 namespace Les.Eval
 open Les.Syntax
@@ -21,7 +22,7 @@ inductive Value where
   | str (s : String)
   | unit
   | builtin (b : Builtin)
-  /-- `def`。段階 A では作られない（`funcDef` は unsupported）。型だけ設計どおり置く。 -/
+  /-- `def` の実行時表現。段階 B では `funcDef` と `callClosure` が生成・呼び出しを行う。 -/
   | closure (params : List Param) (body : List Stmt) (scope : ScopeId)
   deriving Repr
 
@@ -56,7 +57,7 @@ inductive ErrPos where
 inductive Halt where
   | exit (code : Int)
   | error (msg : String) (pos : ErrPos)
-  /-- 段階 A が扱わない機構（def・呼び出し・未観測の演算）。Go との比較では UNSUPPORTED。 -/
+  /-- 現在の評価器が未対応の演算・引数形式など。Go との比較では UNSUPPORTED（非 PASS）。 -/
   | unsupported (what : String)
   | outOfFuel
   deriving Repr

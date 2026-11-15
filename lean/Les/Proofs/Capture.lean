@@ -3,14 +3,15 @@ import Les.Proofs.Heap
 import Les.Proofs.Memo
 
 /-
-P2c-1: スナップショット（`Env.snap`）に捕捉されたアドレスの保存性。
-対象は既存の `lookupEnv` / `capture` / `Heap.bind`（定義は変更しない）。
+P2c-1/2: `Env.snap` に捕捉されたアドレスの保存性（E14）と、
+捕捉時に未束縛だった名前の前方参照・再束縛（E15）。
+対象は既存の `lookupEnv` / `capture` / `Heap.lookup` / `Heap.bind`（定義は変更しない）。
 `sorry` / `admit` / 新たな公理は使わない。
 
-主張するのは「`snap` に捕捉された名前は、どの Heap・どの再束縛の後でも同じアドレスを指し、
-そのアドレスの Cell は再束縛操作そのものでは変わらない」ことだけ。Cell の値が永久に不変とは
-言わない（後から `whnf` で強制すれば `suspended → done` に変わりうる）。捕捉されなかった名前は
-生きたスコープを引く（E15）ので、この保存性の対象外。
+捕捉済みの名前は `snap` のアドレスを使い続け、`Heap.bind` 自体はその Cell を変えない。
+ただし後の `whnf` による `suspended → done` など、Cell の内容が永久に不変とは主張しない。
+未捕捉の名前は生きたスコープから解決するが、参照するスコープの存在や束縛後の
+アドレス有効性には、各定理に記載した条件が必要。
 -/
 namespace Les.Eval
 open Les.Syntax

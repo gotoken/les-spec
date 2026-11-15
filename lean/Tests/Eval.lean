@@ -270,7 +270,7 @@ def main (args : List String) : IO UInt32 := do
   let missing := stageA.filter (!names.contains ·)
   t.check "all stage A cases exist in corpus" missing.isEmpty s!"{missing}"
   t.check "stage A has 19 cases" (stageA.length == 19)
-  t.check "corpus has 33 cases" (names.size == 33) s!"{names.size}"
+  t.check "corpus has 35 cases" (names.size == 35) s!"{names.size}"
   t.check "every corpus case is PASS (no UNSUPPORTED / OUT_OF_FUEL)"
     (counts.toList == [("PASS", names.size), ("FAIL", 0), ("OUT_OF_FUEL", 0), ("UNSUPPORTED", 0)]) s!"{counts.toList}"
   let f ← t.fails.get

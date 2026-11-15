@@ -1,0 +1,8 @@
+a: Int = 1
+
+def f(p: Int): Int:
+    p
+
+b: Int = f(a + 1)
+a = 10
+print b

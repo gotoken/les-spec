@@ -1,0 +1,29 @@
+name: Lean build and regression
+
+on:
+  push:
+    branches: ["main", "fix/nonvacuity-demand-proof-20261115"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean
+          auto-config: false
+          build: true
+          test: false
+          use-mathlib-cache: false
+      - name: Check syntax and evaluator corpus
+        working-directory: lean
+        run: |
+          lake exe les-syntax-test ../lesdump/golden 35
+          lake exe les-eval-test ../lesdump/golden ../difftest/corpus

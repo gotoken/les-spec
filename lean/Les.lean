@@ -11,6 +11,7 @@ import Les.Proofs.Capture
 import Les.Proofs.WellFormed
 import Les.Proofs.Monotone
 import Les.Proofs.MonotoneEval
+import Les.Proofs.NonVacuity
 
 namespace Les
 

@@ -3,6 +3,8 @@ P0 の足場 + P1c-1 の構文層。意味論（評価器）はまだ含めな�
 固定 upstream: upstream/LES_COMMIT を参照。
 -/
 import Les.Syntax
+import Les.Eval.Eval
+import Les.Eval.Observe
 
 namespace Les
 

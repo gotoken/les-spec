@@ -1,7 +1,7 @@
 # P1a 実行結果
 
 - 日時 / upstream SHA: 2026-11-15 (UTC) / `aa78fdcfc76b156e6b5ab4735516fcefadce954b`（P0 のビルド済み CLI `.work/bin/les` を使用）
-- ブランチ: `p1a-force-observation`。PR #1（P0）が未マージだったため、`p0-oracle-lean-scaffold` の上に積んでいる。
+- ブランチ: `p1a-force-observation`（作業中に PR #1 がマージされたため、main の上に rebase 済み）。
 - 変更ファイル:
   - `difftest/run.py`: stderr 中のケースファイルの絶対パスを `<CASE>` に置換してから比較
   - `difftest/corpus/div-zero-control.expect.json`: stderr を厳密に期待（`Runtime Error: <CASE>:1: division by zero at col 9`）
@@ -42,7 +42,6 @@
 
 - `force` の対象がタプル・辞書・メソッド呼出の場合（`eval_test.go` 5–6 節）は未観測。
 - `force 50 + 60` が 110 になる優先順位と、`force` のメモ化への影響は、CLI 観測のみでソース読解は未実施。
-- PR #1 が未マージなので、この PR は #1 を土台にしている。#1 のマージ後は base を main に付け替える。
 
 ## 次の一つのタスク候補
 

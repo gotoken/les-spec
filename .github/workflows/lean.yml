@@ -2,7 +2,7 @@ name: Lean build and regression
 
 on:
   push:
-    branches: ["main", "fix/nonvacuity-demand-proof-20261115"]
+    branches: ["main"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:

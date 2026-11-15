@@ -21,3 +21,5 @@ ACTUAL="$(git -C "$UP" rev-parse HEAD)"
 [[ "$ACTUAL" == "$SHA" ]] || { echo "SHA mismatch: $ACTUAL" >&2; exit 1; }
 (cd "$UP" && go build -o "$ROOT/.work/bin/les" ./cmd/les)
 echo "Built les CLI at $ACTUAL: $ROOT/.work/bin/les"
+(cd "$ROOT/lesdump" && go build -o "$ROOT/.work/bin/lesdump" .)
+echo "Built lesdump: $ROOT/.work/bin/lesdump"

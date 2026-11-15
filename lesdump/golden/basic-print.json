@@ -1,0 +1,76 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "kind": "VarDecl",
+      "name": "x",
+      "pos": {
+        "col": 1,
+        "line": 1
+      },
+      "type_annot": "",
+      "value": {
+        "kind": "Binary",
+        "left": {
+          "kind": "Int",
+          "pos": {
+            "col": 5,
+            "line": 1
+          },
+          "value": 10
+        },
+        "op": "+",
+        "pos": {
+          "col": 8,
+          "line": 1
+        },
+        "right": {
+          "kind": "Int",
+          "pos": {
+            "col": 10,
+            "line": 1
+          },
+          "value": 20
+        }
+      }
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "Ident",
+            "name": "x",
+            "pos": {
+              "col": 7,
+              "line": 2
+            }
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 2
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 2
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 2
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

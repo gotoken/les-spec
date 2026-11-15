@@ -1,0 +1,115 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "String",
+            "pos": {
+              "col": 7,
+              "line": 1
+            },
+            "value": "a"
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 1
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 1
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 1
+      }
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "String",
+            "pos": {
+              "col": 7,
+              "line": 2
+            },
+            "value": "b"
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 2
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 2
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 2
+      }
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "Int",
+            "pos": {
+              "col": 7,
+              "line": 3
+            },
+            "value": 1
+          },
+          {
+            "kind": "Int",
+            "pos": {
+              "col": 10,
+              "line": 3
+            },
+            "value": 2
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 3
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 3
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 3
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

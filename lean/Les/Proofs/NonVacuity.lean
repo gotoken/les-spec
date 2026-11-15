@@ -56,7 +56,7 @@ private theorem demand_int_ok (m : Machine) (p : Pos) (i : Int) (env : Env) :
       (fun h : Halt => throw (h.attach p))).run).run m =
       (Except.ok (.int i), m')
   simp only [ExceptT.tryCatch, ExceptT.run, ExceptT.mk, StateT.run_bind]
-  simp only [ExceptT.run, ExceptT.mk] at hbody
+  simp only [ExceptT.run] at hbody
   rw [hbody]
   rfl
 

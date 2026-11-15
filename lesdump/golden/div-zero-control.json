@@ -1,0 +1,59 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "Binary",
+            "left": {
+              "kind": "Int",
+              "pos": {
+                "col": 7,
+                "line": 1
+              },
+              "value": 1
+            },
+            "op": "/",
+            "pos": {
+              "col": 9,
+              "line": 1
+            },
+            "right": {
+              "kind": "Int",
+              "pos": {
+                "col": 11,
+                "line": 1
+              },
+              "value": 0
+            }
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 1
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 1
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 1
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

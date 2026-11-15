@@ -1,0 +1,10 @@
+y: Int = 3
+
+def f(): Int:
+    y
+
+def g(): Int:
+    y: Int = 99
+    f()
+
+print g()

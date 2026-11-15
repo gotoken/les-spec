@@ -1,0 +1,163 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "kind": "VarDecl",
+      "name": "a",
+      "pos": {
+        "col": 1,
+        "line": 1
+      },
+      "type_annot": "Int",
+      "value": {
+        "kind": "Int",
+        "pos": {
+          "col": 10,
+          "line": 1
+        },
+        "value": 1
+      }
+    },
+    {
+      "body": [
+        {
+          "expr": {
+            "kind": "Ident",
+            "name": "p",
+            "pos": {
+              "col": 5,
+              "line": 4
+            }
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 4
+          }
+        }
+      ],
+      "kind": "FuncDef",
+      "name": "f",
+      "params": [
+        {
+          "name": "p",
+          "pos": {
+            "col": 7,
+            "line": 3
+          },
+          "type_annot": "Int"
+        }
+      ],
+      "pos": {
+        "col": 1,
+        "line": 3
+      },
+      "return_type": "Int"
+    },
+    {
+      "kind": "VarDecl",
+      "name": "b",
+      "pos": {
+        "col": 1,
+        "line": 6
+      },
+      "type_annot": "Int",
+      "value": {
+        "args": [
+          {
+            "kind": "Binary",
+            "left": {
+              "kind": "Ident",
+              "name": "a",
+              "pos": {
+                "col": 12,
+                "line": 6
+              }
+            },
+            "op": "+",
+            "pos": {
+              "col": 14,
+              "line": 6
+            },
+            "right": {
+              "kind": "Int",
+              "pos": {
+                "col": 16,
+                "line": 6
+              },
+              "value": 1
+            }
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "f",
+          "pos": {
+            "col": 10,
+            "line": 6
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 11,
+          "line": 6
+        }
+      }
+    },
+    {
+      "kind": "VarDecl",
+      "name": "a",
+      "pos": {
+        "col": 1,
+        "line": 7
+      },
+      "type_annot": "",
+      "value": {
+        "kind": "Int",
+        "pos": {
+          "col": 5,
+          "line": 7
+        },
+        "value": 10
+      }
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "Ident",
+            "name": "b",
+            "pos": {
+              "col": 7,
+              "line": 8
+            }
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 8
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 8
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 8
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

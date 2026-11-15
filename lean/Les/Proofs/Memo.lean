@@ -57,4 +57,121 @@ theorem whnf_done_twice (n k : Nat) (a : Addr) (v : Value) (m : Machine)
   rw [run_bind_ok _ _ m m v (whnf_done k a v m h)]
   rfl
 
+
+/-! ## P2b-2: 未評価 Cell の初回強制とブラックホール
+
+`demand`（任意の評価）がアドレスの有効性や Heap の整合性を保存することは**仮定しない**。
+必要な箇所では「`demand` の実行結果」と「その時点でアドレスが有効」を明示的な仮定にする。 -/
+
+/-- Cell が `some` ならアドレスは有効。 -/
+theorem Heap.valid_of_cell?_some {h : Heap} {a : Addr} {c : Cell} (hc : h.cell? a = some c) :
+    h.ValidAddr a := by
+  unfold Heap.cell? at hc
+  unfold Heap.ValidAddr
+  by_cases hlt : a < h.cells.size
+  · exact hlt
+  · rw [Array.getElem?_eq_none (Nat.le_of_not_lt hlt)] at hc
+    cases hc
+
+/-- 範囲外のアドレスの Cell は `none`。 -/
+theorem Heap.cell?_none_of_not_valid {h : Heap} {a : Addr} (ha : ¬ h.ValidAddr a) :
+    h.cell? a = none := by
+  unfold Heap.cell?
+  exact Array.getElem?_eq_none (Nat.le_of_not_lt ha)
+
+/-- `modHeap f` は Heap だけを `f` で書き換え、値は `()`。 -/
+theorem modHeap_run (f : Heap → Heap) (m : Machine) :
+    ((modHeap f).run).run m = (Except.ok (), { m with heap := f m.heap }) := rfl
+
+/-- 1. `blackhole` Cell を正の fuel で強制すると、位置なしの blackhole エラーで、Machine は変化しない。 -/
+theorem whnf_blackhole (n : Nat) (a : Addr) (e : Expr) (m : Machine)
+    (h : m.heap.cell? a = some (.blackhole e)) :
+    ((whnf (n + 1) a).run).run m =
+      (Except.error (Halt.error "blackhole: circular reference detected in lazy thunk" ErrPos.absent), m) := by
+  rw [whnf, getHeap_bind]
+  simp [h]
+  rfl
+
+/-- 2. 範囲外（Cell が `none`）のアドレスを正の fuel で強制すると、dangling-address エラーで、
+    Machine は変化しない。 -/
+theorem whnf_dangling (n : Nat) (a : Addr) (m : Machine) (h : m.heap.cell? a = none) :
+    ((whnf (n + 1) a).run).run m =
+      (Except.error (Halt.error "internal: dangling address" ErrPos.absent), m) := by
+  rw [whnf, getHeap_bind]
+  simp [h]
+  rfl
+
+theorem whnf_out_of_range (n : Nat) (a : Addr) (m : Machine) (h : ¬ m.heap.ValidAddr a) :
+    ((whnf (n + 1) a).run).run m =
+      (Except.error (Halt.error "internal: dangling address" ErrPos.absent), m) :=
+  whnf_dangling n a m (Heap.cell?_none_of_not_valid h)
+
+/-- 初回強制の入口で Cell を `blackhole` に書き換えた直後の Machine。 -/
+def Machine.blackholed (m : Machine) (a : Addr) (e : Expr) : Machine :=
+  { m with heap := m.heap.setCell a (.blackhole e) }
+
+/-- 3. `suspended e env` の初回強制は、まず対象 Cell を `blackhole` にしてから `demand` を実行し、
+    その結果を `done` として書き戻す（既存の `whnf` の展開そのもの）。書き込み前の状態は
+    `m.blackholed a e` で、`demand n e env` はこの状態から走る。 -/
+theorem whnf_suspended (n : Nat) (a : Addr) (e : Expr) (env : Env) (m : Machine)
+    (h : m.heap.cell? a = some (.suspended e env)) :
+    ((whnf (n + 1) a).run).run m =
+      ((do let v ← demand n e env
+           modHeap fun x => x.setCell a (.done v)
+           pure v : EvalM Value).run).run
+        (m.blackholed a e) := by
+  rw [whnf, getHeap_bind]
+  simp only [h]
+  rw [run_bind_ok _ _ m (m.blackholed a e) () (modHeap_run _ m)]
+
+/-- `blackholed` の直後、対象 Cell は `blackhole e`（再入すると `whnf_blackhole` に当たる）。 -/
+theorem Machine.blackholed_cell? (m : Machine) (a : Addr) (e : Expr) {env : Env}
+    (h : m.heap.cell? a = some (.suspended e env)) :
+    (m.blackholed a e).heap.cell? a = some (.blackhole e) :=
+  Heap.setCell_cell?_self m.heap _ (Heap.valid_of_cell?_some h)
+
+/-- 3'. `demand` の実行中に同じアドレスを再び強制すると（`demand` がまだ Cell を書き換えていない状態では）
+    blackhole エラーになる。`whnf_blackhole` と `blackholed_cell?` の合成。 -/
+theorem whnf_reenter_blackholed (k : Nat) (a : Addr) (e : Expr) (env : Env) (m : Machine)
+    (h : m.heap.cell? a = some (.suspended e env)) :
+    ((whnf (k + 1) a).run).run (m.blackholed a e) =
+      (Except.error (Halt.error "blackhole: circular reference detected in lazy thunk" ErrPos.absent),
+        m.blackholed a e) :=
+  whnf_blackhole k a e _ (m.blackholed_cell? a e h)
+
+/-- 4. `demand` が `ok v` で終わる（最終状態 `m₂`）なら、`whnf` は `v` を返し、最終状態は
+    `m₂` の Heap の対象アドレスに `done v` を書いたもの。範囲外への `set!` は何もしないので、
+    この等式自体にアドレスの有効性は要らない。 -/
+theorem whnf_suspended_ok (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ : Machine) (v : Value)
+    (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂)) :
+    ((whnf (n + 1) a).run).run m =
+      (Except.ok v, { m₂ with heap := m₂.heap.setCell a (.done v) }) := by
+  rw [whnf_suspended n a e env m h, run_bind_ok _ _ _ m₂ v hd]
+  rfl
+
+/-- 4'. 成功した初回強制の後、対象アドレスの Cell は `done v`。書き込みが実際に起きる条件として、
+    `demand` 終了後の状態 `m₂` でアドレスが有効であること（`hvalid`）を**仮定**する
+    （`demand` が有効性を保存することは証明していない）。 -/
+theorem whnf_suspended_ok_cell (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ m₃ : Machine)
+    (v : Value) (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂))
+    (hvalid : m₂.heap.ValidAddr a)
+    (hrun : ((whnf (n + 1) a).run).run m = (Except.ok v, m₃)) :
+    m₃.heap.cell? a = some (.done v) := by
+  rw [whnf_suspended_ok n a e env m m₂ v h hd] at hrun
+  have hm : m₃ = { m₂ with heap := m₂.heap.setCell a (.done v) } := (Prod.mk.inj hrun).2.symm
+  subst hm
+  exact Heap.setCell_cell?_self m₂.heap _ hvalid
+
+/-- 5. P2b-1 への接続: 成功した初回強制の後、同じ Cell を再び強制しても値は `v` のままで、
+    Machine は変化しない。 -/
+theorem whnf_suspended_ok_then_stable (n k : Nat) (a : Addr) (e : Expr) (env : Env)
+    (m m₂ m₃ : Machine) (v : Value) (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂))
+    (hvalid : m₂.heap.ValidAddr a)
+    (hrun : ((whnf (n + 1) a).run).run m = (Except.ok v, m₃)) :
+    ((whnf (k + 1) a).run).run m₃ = (Except.ok v, m₃) :=
+  whnf_done k a v m₃ (whnf_suspended_ok_cell n a e env m m₂ m₃ v h hd hvalid hrun)
+
 end Les.Eval

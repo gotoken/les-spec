@@ -215,6 +215,20 @@ def unitTests (t : T) : IO Unit := do
   let o := run 200 (mkProg [defn "f" ["p"] [stmtE (ident "p")], assign "b" (callE "f" [add (ident "z") (sInt 0)]),
     assign "z" (sInt 5), assign "z" (sInt 7), stmtE (printE [ident "b"])])
   t.check "capture: unbound name inside a compound argument sees the latest binding (7)" (o.stdout == "7") s!"{repr o}"
+  -- 作成時に未束縛で、最後まで束縛されない識別子引数は呼び出し時に評価しない（Go CLI: `1`）。
+  -- 準備時に即時に引くと「undefined identifier」で止まる。
+  let o := run 200 (mkProg [defn "f" ["p"] [stmtE (sInt 1)], stmtE (printE [callE "f" [ident "z"]])])
+  t.check "capture: never-bound identifier argument is deferred, not looked up at call time (1)"
+    (o.stdout == "1" && o.halt.isNone) s!"{repr o}"
+  -- 引数が複数足りない呼び出し: 欠けた仮引数は `done unit` に束縛され、本体で読める。
+  -- 注: Go の型検査は引数不足を静的に拒否する（`function expects at least 2 arguments`）ので、
+  -- CheckedProgram では起きない。評価器が全域であることの防御的な AST テスト。
+  let (o, m) := runMachine 200 (mkProg [defn "f" ["a", "b"] [stmtE (ident "a"), stmtE (ident "b"), stmtE (printE [sStr "ok"])],
+    stmtE (callE "f")])
+  t.check "call: several omitted parameters are readable in the body (no halt)"
+    (o.stdout == "ok" && o.halt.isNone) s!"{repr o}"
+  t.check "call: omitted parameters are bound to done unit"
+    (m.heap.cells.any (fun c => match c with | .done .unit => true | _ => false))
   -- (17) 引数不足は unit、余りは無視。
   let o := run 200 (mkProg [defn "f" ["p"] [stmtE (sInt 1)], stmtE (printE [callE "f" [sInt 9, sInt 9]])])
   t.check "call: extra arguments are ignored" (o.stdout == "1")

@@ -1,0 +1,6 @@
+def hello(): Int:
+    print "hi;"
+    1
+
+hello
+print "end"

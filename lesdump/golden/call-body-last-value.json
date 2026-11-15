@@ -1,0 +1,157 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "body": [
+        {
+          "expr": {
+            "args": [
+              {
+                "kind": "String",
+                "pos": {
+                  "col": 11,
+                  "line": 2
+                },
+                "value": "a;"
+              }
+            ],
+            "callee": {
+              "kind": "Ident",
+              "name": "print",
+              "pos": {
+                "col": 5,
+                "line": 2
+              }
+            },
+            "kind": "Call",
+            "pos": {
+              "col": 5,
+              "line": 2
+            }
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 2
+          }
+        },
+        {
+          "expr": {
+            "kind": "Int",
+            "pos": {
+              "col": 5,
+              "line": 3
+            },
+            "value": 2
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 3
+          }
+        },
+        {
+          "expr": {
+            "args": [
+              {
+                "kind": "String",
+                "pos": {
+                  "col": 11,
+                  "line": 4
+                },
+                "value": "b;"
+              }
+            ],
+            "callee": {
+              "kind": "Ident",
+              "name": "print",
+              "pos": {
+                "col": 5,
+                "line": 4
+              }
+            },
+            "kind": "Call",
+            "pos": {
+              "col": 5,
+              "line": 4
+            }
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 4
+          }
+        },
+        {
+          "expr": {
+            "kind": "Int",
+            "pos": {
+              "col": 5,
+              "line": 5
+            },
+            "value": 3
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 5
+          }
+        }
+      ],
+      "kind": "FuncDef",
+      "name": "f",
+      "params": [],
+      "pos": {
+        "col": 1,
+        "line": 1
+      },
+      "return_type": "Int"
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "args": [],
+            "callee": {
+              "kind": "Ident",
+              "name": "f",
+              "pos": {
+                "col": 7,
+                "line": 7
+              }
+            },
+            "kind": "Call",
+            "pos": {
+              "col": 8,
+              "line": 7
+            }
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 7
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 7
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 7
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

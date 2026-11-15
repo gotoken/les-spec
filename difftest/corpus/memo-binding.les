@@ -1,0 +1,8 @@
+def g(): Int:
+    print "side;"
+    1
+
+x = g()
+print "before;"
+print x
+print x

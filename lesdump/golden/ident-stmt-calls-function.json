@@ -1,0 +1,117 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "body": [
+        {
+          "expr": {
+            "args": [
+              {
+                "kind": "String",
+                "pos": {
+                  "col": 11,
+                  "line": 2
+                },
+                "value": "hi;"
+              }
+            ],
+            "callee": {
+              "kind": "Ident",
+              "name": "print",
+              "pos": {
+                "col": 5,
+                "line": 2
+              }
+            },
+            "kind": "Call",
+            "pos": {
+              "col": 5,
+              "line": 2
+            }
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 2
+          }
+        },
+        {
+          "expr": {
+            "kind": "Int",
+            "pos": {
+              "col": 5,
+              "line": 3
+            },
+            "value": 1
+          },
+          "kind": "ExprStmt",
+          "pos": {
+            "col": 5,
+            "line": 3
+          }
+        }
+      ],
+      "kind": "FuncDef",
+      "name": "hello",
+      "params": [],
+      "pos": {
+        "col": 1,
+        "line": 1
+      },
+      "return_type": "Int"
+    },
+    {
+      "expr": {
+        "kind": "Ident",
+        "name": "hello",
+        "pos": {
+          "col": 1,
+          "line": 5
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 5
+      }
+    },
+    {
+      "expr": {
+        "args": [
+          {
+            "kind": "String",
+            "pos": {
+              "col": 7,
+              "line": 6
+            },
+            "value": "end"
+          }
+        ],
+        "callee": {
+          "kind": "Ident",
+          "name": "print",
+          "pos": {
+            "col": 1,
+            "line": 6
+          }
+        },
+        "kind": "Call",
+        "pos": {
+          "col": 1,
+          "line": 6
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 6
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

@@ -1,0 +1,1 @@
+{"stdout": "a", "stderr": "Runtime Error: <CASE>:2: division by zero at col 9\n", "exit_code": 1, "rules": ["E19", "E21"]}

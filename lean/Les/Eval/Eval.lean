@@ -12,8 +12,8 @@ def Halt.attach (p : Pos) : Halt → Halt
   | .error m .pending => .error m (.at p)
   | h => h
 
-private def getHeap : EvalM Heap := do return (← get).heap
-private def modHeap (f : Heap → Heap) : EvalM Unit := modify fun m => { m with heap := f m.heap }
+def getHeap : EvalM Heap := do return (← get).heap
+def modHeap (f : Heap → Heap) : EvalM Unit := modify fun m => { m with heap := f m.heap }
 
 def alloc (c : Cell) : EvalM Addr :=
   modifyGet fun m =>

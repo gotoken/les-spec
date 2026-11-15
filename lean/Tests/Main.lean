@@ -72,6 +72,24 @@ def main (args : List String) : IO UInt32 := do
     t.check "force-postfix-unused-arg: Force(Binary /)" true
   | _ => t.check "force-postfix-unused-arg: Force(Binary /)" false
 
+  -- P1c-3 で追加した意味論テスト（再束縛・自己参照・メモ化）の AST の形
+  match get "rebind-old-binding.json" with
+  | some { body := [.varDecl _ "x" "" (.int _ 5),
+                    .varDecl _ "x" "" (.binary _ "+" (.ident _ "x") (.int _ 1)),
+                    .varDecl _ "x" "" (.binary _ "*" (.ident _ "x") (.int _ 2)),
+                    .expr _ (.call _ (.ident _ "print") [.ident _ "x"])], .. } =>
+    t.check "rebind-old-binding: three bindings of x, later ones read x" true
+  | _ => t.check "rebind-old-binding: three bindings of x, later ones read x" false
+  match get "blackhole.json" with
+  | some { body := [.varDecl _ "x" "Int" (.binary _ "+" (.ident _ "x") (.int _ 1)), _, _], .. } =>
+    t.check "blackhole: annotated self-referential binding" true
+  | _ => t.check "blackhole: annotated self-referential binding" false
+  match get "memo-binding.json" with
+  | some { body := [.funcDef _ "g" [] "Int" [.expr _ (.call _ (.ident _ "print") [.str _ "side;"]), .expr _ (.int _ 1)],
+                    .varDecl _ "x" "" (.call _ (.ident _ "g") []), _, _, _], .. } =>
+    t.check "memo-binding: g has a side effect, x = g()" true
+  | _ => t.check "memo-binding: g has a side effect, x = g()" false
+
   -- 整数は int64 に制約されない
   let big := okProgram ("[{\"kind\":\"ExprStmt\"," ++ p11 ++ ",\"expr\":{\"kind\":\"Int\"," ++ p11 ++ ",\"value\":123456789012345678901234567890}}]")
   match decodeProgramString big with

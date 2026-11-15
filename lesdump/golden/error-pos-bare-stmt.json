@@ -1,0 +1,42 @@
+{
+  "analysis": {
+    "status": "ok",
+    "type_error": "",
+    "type_warnings": []
+  },
+  "body": [
+    {
+      "expr": {
+        "kind": "Binary",
+        "left": {
+          "kind": "Int",
+          "pos": {
+            "col": 1,
+            "line": 1
+          },
+          "value": 1
+        },
+        "op": "/",
+        "pos": {
+          "col": 3,
+          "line": 1
+        },
+        "right": {
+          "kind": "Int",
+          "pos": {
+            "col": 5,
+            "line": 1
+          },
+          "value": 0
+        }
+      },
+      "kind": "ExprStmt",
+      "pos": {
+        "col": 1,
+        "line": 1
+      }
+    }
+  ],
+  "kind": "Program",
+  "schema_version": 1
+}

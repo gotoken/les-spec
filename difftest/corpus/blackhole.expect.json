@@ -1,0 +1,1 @@
+{"stdout": "ok", "stderr": "Runtime Error: blackhole: circular reference detected in lazy thunk\n", "exit_code": 1, "rules": ["E16"]}

@@ -1,0 +1,3 @@
+x = exit(7)
+print "a"
+print x

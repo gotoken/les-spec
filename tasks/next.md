@@ -1,4 +1,17 @@
-# NEXT — P0: Go オラクルの一周と Lean の足場
+# 現在の停止状態（2026-11-15）
+
+**新しい実装・証明タスクはまだ指定されていません。以下の「NEXT — P0」は完了済みの履歴です。再実行しないでください。**
+
+- [PR #19](https://github.com/gotoken/les-spec/pull/19) の P2d-5 は main にマージ済みです。
+- [PR #20](https://github.com/gotoken/les-spec/pull/20) で P2d-5 の非空虚性を示す `lean/Les/Proofs/NonVacuity.lean` を追加しました（未マージ・ビルド確認前）。
+- 今回は [P0〜P2d-5 の成果と証明範囲](../docs/proof-coverage.md) と [PLAN.md](../PLAN.md)、非空虚性の証人を整理しています。これは後続工程の自動開始の指示ではありません。
+- 次の実装・証明は、ユーザーが別途範囲と停止条件を指定してから着手してください。
+
+---
+
+## 履歴：最初の P0 指示（実行済み）
+
+### NEXT — P0: Go オラクルの一周と Lean の足場
 
 **担当:** Claude Code の Sonnet（窓口）。`semantics-opus` は原則呼ばない。
 **対象:** `upstream/LES_COMMIT` の固定コミットのみ。

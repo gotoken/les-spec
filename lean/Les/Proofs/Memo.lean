@@ -215,4 +215,25 @@ theorem whnf_suspended_ok_then_stable_valid (n k : Nat) (a : Addr) (e : Expr) (e
   whnf_suspended_ok_then_stable n k a e env m m₂ m₃ v h hd
     (demand_blackholed_validAddr n a e env m m₂ h hd) hrun
 
+/-! ## P2d-5: 成功した初回強制とメモ化の統合定理 -/
+
+/-- 統合定理。初期状態で `a` が `suspended e env` を指し、`m.blackholed a e` から走らせた
+    `demand n e env` が `ok v`（最終状態 `m₂`）で終わるなら、次がすべて成り立つ:
+    1. `whnf (n+1) a` は `ok v` を返し、最終状態は `m₃ = m₂` の対象アドレスに `done v` を書いたもの。
+    2. `m₃` で対象アドレスの Cell は `done v`。
+    3. 任意の fuel `k + 1` で `m₃` からもう一度 `whnf` すると `ok v` を返し、Machine は変化しない。
+    仮定は `h`（初期 Cell が `suspended`）と `hd`（`demand` が `ok v` で終了）だけ。
+    `demand` の成功は保証せず、失敗後のメモ化は扱わない。 -/
+theorem whnf_suspended_ok_memo (n : Nat) (a : Addr) (e : Expr) (env : Env) (m m₂ : Machine)
+    (v : Value) (h : m.heap.cell? a = some (.suspended e env))
+    (hd : ((demand n e env).run).run (m.blackholed a e) = (Except.ok v, m₂)) :
+    ((whnf (n + 1) a).run).run m =
+        (Except.ok v, { m₂ with heap := m₂.heap.setCell a (.done v) }) ∧
+      ({ m₂ with heap := m₂.heap.setCell a (.done v) }).heap.cell? a = some (.done v) ∧
+      ∀ k, ((whnf (k + 1) a).run).run { m₂ with heap := m₂.heap.setCell a (.done v) } =
+        (Except.ok v, { m₂ with heap := m₂.heap.setCell a (.done v) }) := by
+  have h1 := whnf_suspended_ok n a e env m m₂ v h hd
+  have h2 := whnf_suspended_ok_cell_valid n a e env m m₂ _ v h hd h1
+  exact ⟨h1, h2, fun k => whnf_done k a v _ h2⟩
+
 end Les.Eval

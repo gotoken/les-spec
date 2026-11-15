@@ -10,6 +10,7 @@ import Les.Proofs.Memo
 import Les.Proofs.Capture
 import Les.Proofs.WellFormed
 import Les.Proofs.Monotone
+import Les.Proofs.MonotoneEval
 
 namespace Les
 

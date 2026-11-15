@@ -138,7 +138,9 @@ theorem exec_mono (fuel : Nat) (s : Stmt) (sc : ScopeId) : Mono (exec fuel s sc)
   (monoAt fuel).2.2.2.2.2.2.2.2.2.1 s sc
 
 /-- 帰結: `demand` の開始時に有効なアドレスは、終了時（正常でも例外でも）にも有効。
-    P2b-2 の `whnf_suspended_ok_cell` が仮定する有効性を導くための部品（この PR ではまだ取り除かない）。 -/
+    P2b-2 の `whnf_suspended_ok_cell` が仮定していた有効性を導くための部品。
+    P2d-4 の `demand_blackholed_validAddr` がこの定理を使い、
+    P2d-5 の統合定理では `hvalid` の外部仮定が不要になった。 -/
 theorem demand_validAddr (fuel : Nat) (e : Expr) (env : Env) (m : Machine) {a : Addr}
     (ha : m.heap.ValidAddr a) : (((demand fuel e env).run).run m).2.heap.ValidAddr a :=
   mono_validAddr (demand_mono fuel e env) m ha

@@ -39,6 +39,7 @@ private theorem demand_int_ok (m : Machine) (p : Pos) (i : Int) (env : Env) :
   let m' : Machine := { m with heap := (m.heap.alloc (.done (.int i))).1 }
   have heval :
       ((evalE 1 (.int p i) env).run).run m = (Except.ok a, m') := by
+    rw [evalE]
     rfl
   have hcell : m'.heap.cell? a = some (.done (.int i)) := by
     simpa only [m', a] using Heap.alloc_cell?_new m.heap (.done (.int i))
@@ -49,6 +50,7 @@ private theorem demand_int_ok (m : Machine) (p : Pos) (i : Int) (env : Env) :
         (Except.ok (.int i), m') := by
     rw [run_bind_ok (evalE 1 (.int p i) env) (fun b => whnf 1 b) m m' a heval]
     exact hwhnf
+  rw [demand]
   change
     ((ExceptT.tryCatch (evalE 1 (.int p i) env >>= fun b => whnf 1 b)
       (fun h : Halt => throw (h.attach p))).run).run m =

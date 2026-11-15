@@ -86,16 +86,25 @@ structure Heap where
   cells : Array Cell
   scopes : Array Scope
 
+/-- エラーの位置の状態。「位置待ち」と「意図的に位置なし」を区別する（E16, E21）。 -/
+inductive ErrPos where
+  | pending                                -- まだ位置が無い。最も内側の demand / whnf / exec が一度だけ付ける
+  | absent                                 -- 意図的に位置を持たない（ブラックホール）。何も付けない
+  | at (p : Pos)                           -- 付与済み。上書きしない
+
 inductive Halt where
   | exit (code : Int)                      -- E20
-  | error (msg : String) (pos : Option Pos)
+  | error (msg : String) (pos : ErrPos)
   | outOfFuel                              -- Go に対応物は無い。差分テストでは「結論なし」
 
 structure Machine where
   heap : Heap
-  stdout : String                          -- 出力はここに溜める。エラー・終了時も残る（E19, E20）
+  stdout : String                          -- 出力はここに溜める。`Halt` でも残る（E19, E20）
 
-abbrev EvalM := StateT Machine (Except Halt)
+/-- **ExceptT が外側、状態が内側**。`Halt` を投げても `Machine`（stdout と Heap）は失われず、
+    実行結果は `(Except Halt α, Machine)` として成功・失敗どちらでも最終状態を返す。
+    逆順の `StateT Machine (Except Halt)` だと投げた時点で状態が捨てられ、E19・E20 が出せない。 -/
+abbrev EvalM := ExceptT Halt (StateM Machine)
 
 structure Outcome where
   stdout : String
@@ -148,9 +157,9 @@ end Les.Eval
 
 - `done v` → `v`。
 - `suspended e env` → Cell を `blackhole e` に書き換え、`demand e env` を行い（結果が別の Cell なら `whnf` で辿る）、得た値で Cell を `done v` に書き換える（**メモ化**: E9。Go では `Thunk.Env` も解放する）。
-- `blackhole _` → `Halt.error "blackhole: circular reference detected in lazy thunk" none`（E16、位置なし）。
+- `blackhole _` → `Halt.error "blackhole: circular reference detected in lazy thunk" ErrPos.absent`（E16。**意図的に位置を持たない**ので、以降どの層も位置を付けない）。
 
-エラー位置（E21）: `whnf` / `demand` の中で `Halt.error msg none` を受け取った時、**その式の位置を付ける**（すでに位置があれば付けない）。文の実行 `exec` は、位置が無いまま上がってきたエラーにその文の位置を付ける。`Binary` の位置は `lesdump` の `pos`（演算子の位置）をそのまま使う。
+エラー位置（E21）: 算術のエラー（`division by zero`）や `unsupported` などの原始的なエラーは `ErrPos.pending` で投げる。`whnf` / `demand` は、`pending` のエラーを受け取った時に**その式の位置を付けて `at` にする**。`exec` は、文まで `pending` のまま上がってきたエラーに**その文の位置を付ける**。**`at` と `absent` は変えない**（Go の `FormatRuntimeError` が、すでに整形済みのメッセージを再整形しないのに対応する）。`Binary` の位置は `lesdump` の `pos`（演算子の位置）をそのまま使う。不変条件: `run` が返す時点で `pending` のエラーは残らない（最外の `exec` が必ず付けるため）。ブラックホールは `absent` で投げるので、位置は付かない。
 
 ### 4.3 文
 
@@ -165,6 +174,31 @@ end Les.Eval
 
 ブロックの値は、値を返した最後の `ExprStmt` の Cell。1 つも無ければ `unit`（E12）。トップレベルは全文を実行し、`Halt` が出たら止める。
 
+### 4.4 修正後の設計での期待結果（3 ケース）
+
+状態は `ExceptT Halt (StateM Machine)` なので、どのケースでも `Halt` が出た時点の `Machine.stdout` が `Outcome.stdout` になる。
+
+以下の 3 ケースの結果は、`ErrPos`・`Halt`・`EvalM` と「`pending` だけに位置を付ける」層を最小限に写した玩具モデル（評価器ではない、リポジトリには置かない）を Lean 4.25.0 で実行し、下に書いた比較形式の出力になることを確認した。
+
+**(1) `exit-status`**（`print "ok"`⏎`exit(7)`）
+1. 1 文目: `print` が `"ok"` を `Machine.stdout` に足す（`stdout = "ok"`）。
+2. 2 文目: `exit` を呼び先に評価し、引数 `7` を強制して `Halt.exit 7` を投げる。状態は外側の `StateM` に残る。
+3. `Outcome = { stdout := "ok", halt := some (.exit 7) }` → 比較形式 `{"stdout":"ok","stderr":"","exit_code":7}`。`exit-status.expect.json` と一致する（修正前の積み順だと `stdout` が空になり一致しない）。
+
+**(2) 出力後の実行時エラー**（`print "a"`⏎`print 1 / 0`。CLI 観測は E19）
+1. 1 文目: `stdout = "a"`。
+2. 2 文目: `print` が引数の Thunk（`1 / 0`、位置は `/` の 2 行 9 列）を `whnf` する。`demand` が `1` と `0` を強制し、`/` が `Halt.error "division by zero" .pending` を投げる。
+3. その Thunk の `whnf` / `demand` が `pending` を受け取り、式の位置を付けて `.at (2, 9)` にする。上の層（`exec`）は `at` なので変えない。
+4. `Outcome = { stdout := "a", halt := some (.error "division by zero" (.at ⟨2, 9⟩)) }` → `{"stdout":"a","stderr":"Runtime Error: <CASE>:2: division by zero at col 9\n","exit_code":1}`。Go の観測（stdout `a`、`:2: division by zero at col 9`、exit 1）と一致する。
+
+**(3) ブラックホール**（`x = x + 1`⏎`print "ok"`⏎`print x`。CLI 観測は E16）
+1. 1 文目: `x` は `scope` に未束縛なので `snap` に入らず、`suspended (x + 1)` の Cell `c` を `x` に束縛する（E1, E15）。
+2. 2 文目: `stdout = "ok"`。
+3. 3 文目: `print` が `c` を `whnf` する。`c` を `blackhole` にして `x + 1` を `demand` する。左の `x` を引くと `scope` の現在の束縛 `c` が見つかり、`whnf c` は `blackhole` に当たって `Halt.error "blackhole: circular reference detected in lazy thunk" .absent` を投げる。
+4. 上の層（`whnf` / `demand` / `exec`）は `absent` なので**位置を付けない**。
+5. `Outcome = { stdout := "ok", halt := some (.error "blackhole: …" .absent) }` → `{"stdout":"ok","stderr":"Runtime Error: blackhole: circular reference detected in lazy thunk\n","exit_code":1}`。Go の観測（stdout `ok`、位置なし、exit 1）と一致する。
+- 注: この例は変数に型注釈が無く Go が `Type Warning` を stderr に出す（`t5` で観測）。コーパスに追加する時は警告の出ない書き方を探す必要がある（未確認）。
+
 ## 5. Go CLI と Lean の比較形式
 
 `difftest/corpus/*.expect.json` と同じ形に揃える。**1 つの共通の正規化済み形**を Go 側（`run.py` の観測）と Lean 側（`run` の結果）の両方が出し、`stdout` / `exit_code` / `stderr` を厳密に比較する。
@@ -174,7 +208,7 @@ end Les.Eval
 ```
 
 - `Halt.exit c` → `exit_code = c`、`stderr = ""`。`halt = none` → `exit_code = 0`。
-- `Halt.error msg (some pos)` → `exit_code = 1`、`stderr = "Runtime Error: <CASE>:<line>: <msg> at col <col>\n"`（`<CASE>` は `run.py` がケースのパスを置換する記号と同じ）。`pos = none`（ブラックホールなど）→ `stderr = "Runtime Error: <msg>\n"`。
+- `Halt.error msg (.at pos)` → `exit_code = 1`、`stderr = "Runtime Error: <CASE>:<line>: <msg> at col <col>\n"`（`<CASE>` は `run.py` がケースのパスを置換する記号と同じ）。`Halt.error msg .absent`（ブラックホール）→ `stderr = "Runtime Error: <msg>\n"`。`.pending` は `run` から出てこない（4.2 節の不変条件）。`stdout` は `Machine.stdout` で、`Halt` の種類によらず常に出す。
 - Go の `Type Warning` は stderr に出るので、golden の期待値は**型注釈付き**（警告なし）に限る（P0 の方針と同じ）。
 - `outOfFuel` は比較対象外（「結論なし」として別集計）。
 - Lean 側の実行ファイルは `lesdump` の JSON を読み、上の JSON を標準出力に出す。比較は既存の `difftest/run.py` に「Lean の出力と Go の観測を突き合わせるモード」を足して行う想定（実装は次タスク）。
@@ -214,7 +248,8 @@ end Les.Eval
 | 再束縛 | 右辺を即時評価し `done` で置き換え | Go の挙動（E3）。遅延にすると循環参照になる（コメントの理由と一致） |
 | 停止性 | fuel を構造再帰の引数にする。`partial` にしない | 後の証明（停止性、遅延の健全性）を妨げない。代償は総ステップ数を抑えられないこと（4 節） |
 | 出力 | `Machine.stdout` に溜め、エラー・終了でも残す | E19, E20。比較形式（5 節）の `stdout` にそのまま出る |
-| エラー位置 | `whnf` / `demand` / `exec` で付け、既に付いていれば付けない | Go の `FormatRuntimeError`（メッセージに ` at col ` が含まれていれば何もしない）と同じ冪等性 |
+| エラー位置 | `ErrPos` の 3 状態（`pending` / `absent` / `at`）。`pending` だけを `whnf` / `demand` / `exec` が一度だけ `at` にする | Go の `FormatRuntimeError`（メッセージに ` at col ` が含まれていれば何もしない）と同じ冪等性に加え、ブラックホールのように**意図的に位置が無い**エラー（Go では整形されない panic）を区別するため。`Option Pos` だと「位置待ち」と「位置なし」が区別できない（Codex レビュー指摘） |
+| モナドの積み順 | `ExceptT Halt (StateM Machine)` | `Halt` を投げても `Machine`（stdout）を残すため。`StateT Machine (Except Halt)` だと状態が捨てられ、`exit` やエラーの前の出力が出せない（Codex レビュー指摘。Lean で `exit` 相当を投げて確認済み） |
 | 型 | 評価器は読まない | 1 節。Go の型検査結果を信頼する境界に留め、Lean 側で型安全性を主張しない |
 
 `semantics-opus` には問い合わせなかった。複数の合理的な候補が割れる論点（環境の表現）は、Go の観測（E14, E15）で一意に決まったため。

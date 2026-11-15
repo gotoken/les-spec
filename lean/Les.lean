@@ -8,6 +8,7 @@ import Les.Eval.Observe
 import Les.Proofs.Heap
 import Les.Proofs.Memo
 import Les.Proofs.Capture
+import Les.Proofs.WellFormed
 
 namespace Les
 

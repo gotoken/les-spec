@@ -8,7 +8,7 @@ import Les
 open Lean (Json)
 open Les.Syntax Les.Eval
 
-/-- 段階 A の対象（設計メモ 6 節 + P1c-3 のうちクロージャを使わない 19 件）。 -/
+/-- 段階 A（P1c-4）の 19 件。内訳表示のためだけに使う。判定は全件 PASS 必須。 -/
 def stageA : List String := [
   "basic-print", "print-no-newline", "exit-status", "div-zero-control",
   "lazy-unused-binding", "force-postfix-unused-binding", "force-basic",
@@ -83,6 +83,12 @@ def globalCell (m : Machine) (n : String) : Option Cell :=
 def isDoneInt (c : Option Cell) (i : Int) : Bool :=
   match c with | some (.done (.int j)) => i == j | _ => false
 
+def callE (f : String) (args : List Expr := []) : Expr := .call (P) (ident f) args
+def prm (n : String) : Param := { pos := P, name := n, typeAnnot := "" }
+def defn (n : String) (ps : List String) (body : List Stmt) : Stmt := .funcDef (P) n (ps.map prm) "" body
+/-- 副作用つきの 0 引数関数: `def g(): print "side;"; 1` -/
+def gDef : Stmt := defn "g" [] [stmtE (printE [sStr "side;"]), stmtE (sInt 1)]
+
 def unitTests (t : T) : IO Unit := do
   IO.println "== unit tests =="
   -- 期待値の stderr 欠落は FAIL（stderr は必須。暗黙に照合を省かない）。
@@ -141,9 +147,9 @@ def unitTests (t : T) : IO Unit := do
   let o := run 100 (mkProg [stmtE (printE [add (add (sInt 1) (sInt 2)) (add (sInt 3) (sInt 4))])])
   t.check "fuel: enough fuel decides" (o.stdout == "10" && o.halt.isNone)
   -- (8) 未対応は UNSUPPORTED で、PASS ではない。
-  let o := run 100 (mkProg [.funcDef (P) "f" [] "" [], stmtE (printE [sStr "x"])])
-  t.check "unsupported: def halts as unsupported, later statements do not run"
-    (match o.verdict with | .unsupported _ => o.stdout == "" | _ => false)
+  let o := run 100 (mkProg [stmtE (printE [sStr "a"]), stmtE (ident "print"), stmtE (printE [sStr "b"])])
+  t.check "unsupported: 0-argument builtin call halts, later statements do not run"
+    (match o.verdict with | .unsupported _ => o.stdout == "a" | _ => false) s!"{repr o}"
   let o := run 100 (mkProg [stmtE (printE [.binary (P) "+" (sStr "a") (sStr "b")])])
   t.check "unsupported: String + String is unsupported"
     (match o.verdict with | .unsupported _ => true | _ => false)
@@ -159,6 +165,62 @@ def unitTests (t : T) : IO Unit := do
   let o := run 100 (mkProg [stmtE (printE [bad 5, bad 11])])
   t.check "order: print arguments are forced left to right (col 5)"
     (match o.halt with | some (.error _ (.at p)) => p.col == 5 | _ => false) s!"{repr o}"
+  -- ===== 段階 B（def・呼び出し・closure）=====
+  -- (11) 引数の共有・メモ化（E9, E10）: `twice(a) = a + a` に `twice(g())` → 副作用は 1 回。
+  let o := run 200 (mkProg [gDef, defn "twice" ["a"] [stmtE (add (ident "a") (ident "a"))],
+    stmtE (printE [callE "twice" [callE "g"]])])
+  t.check "args: compound argument is one shared thunk (side;2)" (o.stdout == "side;2" && o.halt.isNone) s!"{repr o}"
+  -- (12) 識別子引数は既存の Cell を共有し、呼び出し時には強制しない（E11）。
+  let o := run 200 (mkProg [assign "n" (.binary (P 7 1) "/" (sInt 1) (sInt 0)),
+    defn "f" ["a"] [stmtE (sInt 1)], stmtE (printE [callE "f" [ident "n"]])])
+  t.check "args: unused identifier argument is never forced" (o.stdout == "1" && o.halt.isNone) s!"{repr o}"
+  let (o, m) := runMachine 200 (mkProg [assign "n" (callE "g"), gDef,
+    defn "h" ["a"] [stmtE (add (ident "a") (sInt 0))], stmtE (printE [callE "h" [ident "n"], ident "n"])])
+  t.check "args: callee forcing the parameter also forces the caller's binding (side;11)"
+    (o.stdout == "side;11") s!"{repr o}"
+  t.check "args: the caller's binding holds done 1 afterwards" (isDoneInt (globalCell m "n") 1)
+  -- (13) 呼び出しごとの子スコープ・局所束縛（E12）: `x = 1; def f(): x = 2; x` → `2;1`。
+  let (o, m) := runMachine 200 (mkProg [assign "x" (sInt 1), defn "f" [] [assign "x" (sInt 2), stmtE (ident "x")],
+    stmtE (printE [callE "f", sStr ";", ident "x"])])
+  t.check "scope: binding inside a function is local (2;1)" (o.stdout == "2;1") s!"{repr o}"
+  t.check "scope: global x untouched" (isDoneInt (globalCell m "x") 1)
+  -- (14) closure は定義時の生きたスコープを保持する（E13）: `3;4`（スナップショットなら `3;3`）。
+  let o := run 200 (mkProg [assign "y" (sInt 3), defn "f" [] [stmtE (ident "y")],
+    stmtE (printE [callE "f", sStr ";"]), assign "y" (sInt 4), stmtE (printE [callE "f"])])
+  t.check "closure: body sees the later rebinding of a global (3;4)" (o.stdout == "3;4") s!"{repr o}"
+  -- 呼び出し元ではなく定義時のスコープが親になる（字句スコープ。Go CLI: `3`）。
+  let o := run 200 (mkProg [assign "y" (sInt 3), defn "f" [] [stmtE (ident "y")],
+    defn "g" [] [assign "y" (sInt 99), stmtE (callE "f")], stmtE (printE [callE "g"])])
+  t.check "closure: parent scope is the definition scope, not the caller's (3)" (o.stdout == "3") s!"{repr o}"
+  -- 関数内の def は、その呼び出しの子スコープを保持する。
+  let o := run 200 (mkProg [defn "mk" [] [assign "k" (sInt 5), defn "inner" [] [stmtE (ident "k")], stmtE (callE "inner")],
+    stmtE (printE [callE "mk"])])
+  t.check "closure: a def inside a call keeps that call's scope (5)" (o.stdout == "5") s!"{repr o}"
+  -- (15) E22: 識別子だけの文は 0 引数で呼び出す。値の文の値は最後の式文。
+  let o := run 200 (mkProg [defn "hello" [] [stmtE (printE [sStr "hi;"]), stmtE (sInt 1)],
+    stmtE (ident "hello"), stmtE (printE [sStr "end"])])
+  t.check "E22: bare identifier statement calls a 0-argument def (hi;end)" (o.stdout == "hi;end" && o.halt.isNone) s!"{repr o}"
+  let o := run 200 (mkProg [defn "body" [] [stmtE (printE [sStr "a;"]), stmtE (sInt 2), stmtE (printE [sStr "b;"]), stmtE (sInt 3)],
+    stmtE (printE [callE "body"])])
+  t.check "call: value is the last expression statement (a;b;3)" (o.stdout == "a;b;3") s!"{repr o}"
+  -- (16) newCapturedThunk: 既に snap を持つ環境の中で作る引数 Thunk は、その snap から捕捉する。
+  -- `a = 1; def f(p): p; b = f(a + 1); a = 10; print b` → `2`（Go CLI で確認。live スコープだけを見ると 11）。
+  let o := run 200 (mkProg [assign "a" (sInt 1), defn "f" ["p"] [stmtE (ident "p")],
+    assign "b" (callE "f" [add (ident "a") (sInt 1)]), assign "a" (sInt 10), stmtE (printE [ident "b"])])
+  t.check "capture: argument thunk built inside a snapshot env uses the snapshot (2)" (o.stdout == "2") s!"{repr o}"
+  -- 引数の識別子が作成時に未束縛なら強制時に生きたスコープから引く（E15。Go CLI: `5` / `7`）。
+  let o := run 200 (mkProg [defn "f" ["p"] [stmtE (ident "p")], assign "b" (callE "f" [ident "z"]),
+    assign "z" (sInt 5), stmtE (printE [ident "b"])])
+  t.check "capture: unbound identifier argument resolves at force time (5)" (o.stdout == "5") s!"{repr o}"
+  let o := run 200 (mkProg [defn "f" ["p"] [stmtE (ident "p")], assign "b" (callE "f" [add (ident "z") (sInt 0)]),
+    assign "z" (sInt 5), assign "z" (sInt 7), stmtE (printE [ident "b"])])
+  t.check "capture: unbound name inside a compound argument sees the latest binding (7)" (o.stdout == "7") s!"{repr o}"
+  -- (17) 引数不足は unit、余りは無視。
+  let o := run 200 (mkProg [defn "f" ["p"] [stmtE (sInt 1)], stmtE (printE [callE "f" [sInt 9, sInt 9]])])
+  t.check "call: extra arguments are ignored" (o.stdout == "1")
+  -- (18) 再帰と fuel: 自己呼び出しは fuel で止まり OUT_OF_FUEL（PASS にならない）。
+  let o := run 50 (mkProg [defn "loop" [] [stmtE (callE "loop")], stmtE (callE "loop")])
+  t.check "fuel: infinite recursion ends as outOfFuel" (match o.verdict with | .outOfFuel => true | _ => false) s!"{repr o}"
 
 def main (args : List String) : IO UInt32 := do
   let t : T := { fails := ← IO.mkRef 0 }
@@ -185,16 +247,18 @@ def main (args : List String) : IO UInt32 := do
       | .fail w => " " ++ w | .unsupported w => " (" ++ w ++ ")" | _ => ""
     IO.println s!"{res.tag}  {if inA then "[A]" else "[B]"} {n}{note}"
     counts := counts.map fun (k, c) => if k == res.tag then (k, c + 1) else (k, c)
-    -- 段階 A の 19 件は PASS 必須。それ以外は FAIL でなければよい（UNSUPPORTED が正常）。
+    -- 全件 PASS 必須。FAIL / OUT_OF_FUEL / UNSUPPORTED が 1 件でもあれば全体が失敗。
     match res with
     | .pass => pure ()
-    | .unsupported _ => if inA then t.fails.modify (· + 1)
     | _ => t.fails.modify (· + 1)
   unitTests t
   IO.println s!"summary: {counts.toList}"
   let missing := stageA.filter (!names.contains ·)
   t.check "all stage A cases exist in corpus" missing.isEmpty s!"{missing}"
   t.check "stage A has 19 cases" (stageA.length == 19)
+  t.check "corpus has 33 cases" (names.size == 33) s!"{names.size}"
+  t.check "every corpus case is PASS (no UNSUPPORTED / OUT_OF_FUEL)"
+    (counts.toList == [("PASS", names.size), ("FAIL", 0), ("OUT_OF_FUEL", 0), ("UNSUPPORTED", 0)]) s!"{counts.toList}"
   let f ← t.fails.get
   IO.println (if f == 0 then "OK" else s!"{f} failure(s)")
   return (if f == 0 then 0 else 1)

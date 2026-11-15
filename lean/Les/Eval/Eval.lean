@@ -1,10 +1,9 @@
 import Les.Eval.Heap
 
 /-
-段階 A の評価器（docs/evaluator-design.md 4 節）。fuel を構造再帰の引数にした全域関数で、
+段階 B の評価器（段階 A + def・呼び出し・closure）（docs/evaluator-design.md 4 節）。fuel を構造再帰の引数にした全域関数で、
 `partial` / `sorry` / `unsafe` は使わない。fuel は呼び出しの入れ子の深さの上限。
-段階 A で扱わないもの: `def`・ユーザー関数の呼び出し・0 引数の組込み呼び出し・
-Int 以外／負数の算術。これらは `Halt.unsupported`（比較では UNSUPPORTED）。
+扱わないもの: 0 引数の組込み呼び出し・Int 以外／負数の算術。これらは `Halt.unsupported`（比較では UNSUPPORTED）。
 -/
 namespace Les.Eval
 open Les.Syntax
@@ -30,11 +29,12 @@ def lookupEnv (heap : Heap) (env : Env) (n : String) : Option Addr :=
   | none => heap.lookup env.scope n
 
 /-- 作成時点で見えている名前だけをスナップショットする（E14, E15）。 -/
-def capture (e : Expr) (scope : ScopeId) : EvalM Env := do
+def capture (e : Expr) (env : Env) : EvalM Env := do
   let heap ← getHeap
   let names := (exprNames e).eraseDups
-  let snap := names.filterMap fun n => (heap.lookup scope n).map (n, ·)
-  return { snap, scope }
+  -- Go の captureEnv: 今の環境（snap → 生きたスコープ）で見つかる名前だけをコピーする。
+  let snap := names.filterMap fun n => (lookupEnv heap env n).map (n, ·)
+  return { snap, scope := env.scope }
 
 def arith (op : String) (a b : Value) : EvalM Value :=
   match a, b with
@@ -77,9 +77,11 @@ def evalE : Nat → Expr → Env → EvalM Addr
       alloc (.done v)
     | .call _ callee args => do
       let f ← demand n callee env
+      let cells ← prepArgs n args env
       match f with
-      | .builtin b => callBuiltin n b args env
-      | _ => throw (.unsupported "call of a user function (stage B)")
+      | .builtin b => callBuiltin n b cells
+      | .closure params body cscope => callClosure n params body cscope cells
+      | _ => throw (.unsupported "call of a non-function value")
 
 /-- Cell を強制して値にする。共有・メモ化・ブラックホール（E9, E16）。 -/
 def whnf : Nat → Addr → EvalM Value
@@ -102,12 +104,11 @@ def demand : Nat → Expr → Env → EvalM Value
   | n + 1, e, env =>
     tryCatch (do let a ← evalE n e env; whnf n a) fun h => throw (h.attach (exprPos e))
 
-/-- 組込みの呼び出し。引数は先に左から準備し（force は準備時に評価: E6, E11）、
-    その後 `print` は左から強制（E19）、`exit` は強制して終了（E20）。 -/
-def callBuiltin : Nat → Builtin → List Expr → Env → EvalM Addr
-  | 0, _, _, _ => throw .outOfFuel
-  | n + 1, b, args, env => do
-    let cells ← prepArgs n args env
+/-- 組込みの呼び出し（引数は準備済みの Cell）。`print` は左から強制（E19）、
+    `exit` は強制して終了（E20）。 -/
+def callBuiltin : Nat → Builtin → List Addr → EvalM Addr
+  | 0, _, _ => throw .outOfFuel
+  | n + 1, b, cells => do
     match b with
     | .print => do
       let vals ← forceAll n cells
@@ -123,6 +124,27 @@ def callBuiltin : Nat → Builtin → List Expr → Env → EvalM Addr
         | _ => throw (.unsupported "exit with a non-Int argument")
       | _ => throw (.unsupported "exit with several arguments")
 
+/-- `def` の呼び出し（E12）: 定義時の生きたスコープの子スコープを作り、仮引数を
+    引数の Cell に束縛（足りなければ `unit`、余りは無視）して本体を実行する。 -/
+def callClosure : Nat → List Param → List Stmt → ScopeId → List Addr → EvalM Addr
+  | 0, _, _, _, _ => throw .outOfFuel
+  | n + 1, params, body, cscope, cells => do
+    let sc ← modifyGet fun m =>
+      let (h, sc) := m.heap.newScope (some cscope)
+      (sc, { m with heap := h })
+    let rec bindParams : List Param → List Addr → EvalM Unit
+      | [], _ => pure ()
+      | p :: ps, cs => do
+        let (c, rest) ← match cs with
+          | c :: rest => pure (c, rest)
+          | [] => do pure (← alloc (.done .unit), [])
+        modHeap (·.bind sc p.name c)
+        bindParams ps rest
+    bindParams params cells
+    execBlock n body sc
+
+/-- 引数を左から準備する（Go の `CallExpr`: force は即時評価、リテラルは値、
+    それ以外は `newCapturedThunk`）。 -/
 def prepArgs : Nat → List Expr → Env → EvalM (List Addr)
   | 0, _, _ => throw .outOfFuel
   | _ + 1, [], _ => pure []
@@ -131,13 +153,19 @@ def prepArgs : Nat → List Expr → Env → EvalM (List Addr)
     let cs ← prepArgs n as env
     pure (c :: cs)
 
+/-- Go の `newCapturedThunk`: 束縛済みの識別子は既存の Cell を共有（E11）、
+    それ以外は作成時の束縛を `capture` した未評価 Thunk（既に `snap` を持つ環境でも
+    `capture` は `lookupEnv` で snap → 生きたスコープの順に引く）。 -/
 def prepArg : Nat → Expr → Env → EvalM Addr
   | 0, _, _ => throw .outOfFuel
   | n + 1, a, env =>
     match a with
-    | .int .. | .str .. | .force .. => evalE n a env   -- リテラルは done、force は評価済み（E11）
-    | .ident .. => evalE n a env                       -- 既存の Cell をそのまま（E11）
-    | _ => alloc (.suspended a env)                    -- それ以外は未評価 Thunk
+    | .int .. | .str .. | .force .. => evalE n a env
+    | .ident _ name => do
+      match lookupEnv (← getHeap) env name with
+      | some c => pure c
+      | none => do alloc (.suspended a (← capture a env))   -- 未束縛: 強制時に生きたスコープから引く（E15）
+    | _ => do alloc (.suspended a (← capture a env))
 
 def forceAll : Nat → List Addr → EvalM (List Value)
   | 0, _ => throw .outOfFuel
@@ -146,22 +174,41 @@ def forceAll : Nat → List Addr → EvalM (List Value)
     let v ← whnf n c
     let vs ← forceAll n cs
     pure (v :: vs)
-end
+
+/-- 本体の文を順に全部実行し、最後の式文の値を返す（無ければ `unit`: E12）。 -/
+def execBlock : Nat → List Stmt → ScopeId → EvalM Addr
+  | 0, _, _ => throw .outOfFuel
+  | n + 1, ss, sc => do
+    let last ← ss.foldlM (init := (none : Option Addr)) fun last s => do
+      match ← exec n s sc with
+      | some a => pure (some a)
+      | none => pure last
+    match last with
+    | some a => pure a
+    | none => alloc (.done .unit)
 
 /-- 文の実行。値を返すのは式文だけ。`pending` のエラーに文の位置を付ける。 -/
 def exec : Nat → Stmt → ScopeId → EvalM (Option Addr)
   | 0, _, _ => throw .outOfFuel
   | n + 1, s, sc =>
     tryCatch (execCore n s sc) fun h => throw (h.attach (stmtPos s))
-where
-  execCore (n : Nat) (s : Stmt) (sc : ScopeId) : EvalM (Option Addr) :=
+
+def execCore : Nat → Stmt → ScopeId → EvalM (Option Addr)
+  | 0, _, _ => throw .outOfFuel
+  | n + 1, s, sc =>
     match s with
-    | .funcDef .. => throw (.unsupported "def (stage B)")
+    | .funcDef _ name params _ body => do
+      let c ← alloc (.done (.closure params body sc))
+      modHeap (·.bind sc name c)
+      pure none
     | .expr _ (.ident p name) => do
       let env : Env := { snap := [], scope := sc }
       let c ← evalE n (.ident p name) env
       match ← whnf n c with
-      | .closure .. => throw (.unsupported "0-argument call of a user function (stage B)")
+      | .closure params body cscope =>
+        -- E22: 識別子だけの文が関数を指すなら 0 引数で呼び出す
+        let r ← callClosure n params body cscope []
+        pure (some r)
       | .builtin _ => throw (.unsupported "0-argument call of a builtin")
       | _ => pure (some c)
     | .expr _ e => do
@@ -178,9 +225,10 @@ where
         else
           match rhs with
           | .int .. | .str .. | .force .. => evalE n rhs env   -- 評価済み（E6）
-          | _ => do alloc (.suspended rhs (← capture rhs sc))
+          | _ => do alloc (.suspended rhs (← capture rhs env))
       modHeap (·.bind sc name cell)
       pure none
+end
 
 def execAll (fuel : Nat) (ss : List Stmt) (sc : ScopeId) : EvalM Unit :=
   ss.forM fun s => do let _ ← exec fuel s sc; pure ()

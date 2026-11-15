@@ -1,0 +1,4 @@
+def pick(a: Int, b: Int): Int:
+    a
+
+print pick(42, (1 / 0)!)

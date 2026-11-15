@@ -1,9 +1,10 @@
 import Les
 
 /-
-評価器（段階 A）と Go CLI の期待値の比較。
+段階 A・B を含む現在の Lean 評価器と、固定 Go CLI で観測したコーパス期待値を比較する。
 使い方: lake exe les-eval-test ../lesdump/golden ../difftest/corpus [fuel]
-各ケースを PASS / FAIL / OUT_OF_FUEL / UNSUPPORTED に分ける。UNSUPPORTED は PASS に数えない。
+35 件を PASS / FAIL / OUT_OF_FUEL / UNSUPPORTED に分類し、UNSUPPORTED は PASS に数えない。
+`stageA` の 19 件は履歴上の内訳表示であり、判定は35件すべて PASS が必要。
 -/
 open Lean (Json)
 open Les.Syntax Les.Eval

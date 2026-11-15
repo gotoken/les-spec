@@ -22,3 +22,17 @@ lean/
 
 - `lean-toolchain`: `leanprover/lean4:v4.25.0`、`lakefile.toml` + `Les.lean`（意味論なし）で `lake build` 成功。
 - この cloud 環境では `release.lean-lang.org` への接続が拒否されるため `elan toolchain install` は失敗する。GitHub Releases の `lean-4.25.0-linux.tar.zst` を `.work/toolchains/` に展開し、その `bin/` を `PATH` 先頭に置いて `lake build` した。詳細は `tasks/results/P0.md`。
+
+## P1c-1: 構文層（`Les/Syntax/`）
+
+`lesdump` の JSON（schema_version 1）を型付き AST に読み込む。評価器・Thunk・Heap・定理はまだ無い。
+
+- `AST.lean`: `Pos` / `Expr`（6 種）/ `Stmt`（3 種）/ `Param` / `Analysis` / `Program` / `CheckedProgram`。整数は Lean の `Int`、型注釈は未解釈の文字列（空 = 注釈なし）。
+- `Decode.lean`: `Lean.Data.Json`（標準ライブラリ）だけを使うデコーダー。未知の `schema_version`・未対応の `kind`・必須フィールド欠落・型違い・不正な JSON は、JSON 上の場所付きの `Except.error`。
+- `Encode.lean`: AST を同じ JSON に書き戻す（テスト用。golden の往復一致で構造の保持を確認する）。
+- `Program.check`: `analysis.status = ok` のものだけを `CheckedProgram` にする。後の評価器は `CheckedProgram` だけを受け取る設計で、型エラーのプログラムは型の上で評価に渡せない。
+
+```
+cd lean && lake build                                   # Les と テスト実行ファイルをビルド
+lake exe les-syntax-test ../lesdump/golden 10           # golden 10 件の読込・往復・拒否テスト
+```

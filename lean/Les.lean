@@ -5,6 +5,7 @@ P0 の足場 + P1c-1 の構文層。意味論（評価器）はまだ含めな�
 import Les.Syntax
 import Les.Eval.Eval
 import Les.Eval.Observe
+import Les.Proofs.Heap
 
 namespace Les
 

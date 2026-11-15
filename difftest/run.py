@@ -41,7 +41,8 @@ def main() -> int:
                 timeout=args.timeout, cwd=ROOT, check=False
             )
             stdout = run.stdout.decode("utf-8", errors="replace")
-            stderr = run.stderr.decode("utf-8", errors="replace")
+            # Absorb the machine-specific absolute path; "<CASE>" stands for the case file.
+            stderr = run.stderr.decode("utf-8", errors="replace").replace(str(case), "<CASE>")
             exit_code = run.returncode
             diffs = []
             if stdout != expected["stdout"]:

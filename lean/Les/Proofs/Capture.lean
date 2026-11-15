@@ -217,4 +217,79 @@ theorem capture_unbound (e : Expr) (env : Env) (n : String) (heap : Heap)
     rw [hu] at hl
     cases hl
 
+
+/-! ## P2c-2: 捕捉されなかった名前の前方参照と再束縛（E15）
+
+対象は `lookupEnv` までの参照解決。`whnf` が値を返すまでの正しさ、親スコープの循環や不正な
+参照を含む Heap 全体の整合性は仮定も証明もしない。
+「名前が束縛で解決できる」ことと「そのアドレスが有効な Cell を指す」ことは区別する:
+前者は `lookupEnv = some a`、後者は別途 `heap.ValidAddr a`。 -/
+
+/-- 親をたどる探索で、ローカルに束縛があればそれが優先される（親の同名束縛は見えない）。 -/
+theorem Heap.lookup_of_lookupLocal (h : Heap) (s : ScopeId) (n : String) (a : Addr)
+    (hl : h.lookupLocal s n = some a) : h.lookup s n = some a := by
+  unfold Heap.lookup
+  unfold Heap.lookupFrom
+  rw [hl]
+
+/-- 4. ローカルの束縛は、親スコープの同名の束縛より優先される。 -/
+theorem Heap.lookup_local_priority (h : Heap) (s p : ScopeId) (n : String) (a a' : Addr)
+    (hl : h.lookupLocal s n = some a) (_hp : h.lookup p n = some a') : h.lookup s n = some a :=
+  Heap.lookup_of_lookupLocal h s n a hl
+
+/-- `bind` 直後、束縛先のスコープ（存在する）からの `lookup` はその束縛を返す。 -/
+theorem Heap.lookup_bind_self (h : Heap) (s : ScopeId) (n : String) (a : Addr)
+    (hs : s < h.scopes.size) : (h.bind s n a).lookup s n = some a :=
+  Heap.lookup_of_lookupLocal _ s n a (Heap.bind_lookupLocal_self h s n a hs)
+
+/-- 再束縛（同じスコープで同じ名前をさらに束縛）すると、最新の束縛が見える。 -/
+theorem Heap.lookup_rebind (h : Heap) (s : ScopeId) (n : String) (a b : Addr)
+    (hs : s < h.scopes.size) : ((h.bind s n a).bind s n b).lookup s n = some b := by
+  apply Heap.lookup_bind_self
+  rw [Heap.bind_scopes_size]; exact hs
+
+/-- 1. `capture` 実行時に未束縛だった名前は、生成された `snap` に入らず、`lookupEnv` は
+    生きたスコープ（`env.scope`）の `lookup` に解決される。名前が式に現れるかどうかは問わない。
+    `snap` に無いことは P2c-1 の `capture_unbound` から導く。 -/
+theorem capture_unbound_lookup (e : Expr) (env : Env) (m m' : Machine) (env' : Env) (n : String)
+    (hunb : lookupEnv m.heap env n = none)
+    (hrun : ((capture e env).run).run m = (Except.ok env', m')) (heap' : Heap) :
+    env'.snap.find? (·.1 == n) = none ∧ env'.scope = env.scope ∧
+      lookupEnv heap' env' n = heap'.lookup env.scope n := by
+  rw [capture_run] at hrun
+  have h1 : env' = { snap := captureSnap m.heap env e, scope := env.scope } :=
+    (Except.ok.inj (Prod.mk.inj hrun).1).symm
+  subst h1
+  have hnone := capture_unbound e env n m.heap hunb
+  exact ⟨hnone, rfl, lookupEnv_of_not_snap heap' _ n hnone⟩
+
+/-- 2. 前方参照: 生成された環境の生きたスコープ（存在する）に後から `n` を `a` で束縛すると、
+    `lookupEnv` は `some a`。束縛先のスコープが `env'.scope` であることが前提。 -/
+theorem forward_ref_resolves (e : Expr) (env : Env) (m m' : Machine) (env' : Env) (n : String)
+    (a : Addr) (hunb : lookupEnv m.heap env n = none)
+    (hrun : ((capture e env).run).run m = (Except.ok env', m'))
+    (heap' : Heap) (hs : env.scope < heap'.scopes.size) :
+    lookupEnv (heap'.bind env.scope n a) env' n = some a := by
+  obtain ⟨hnone, hscope, _⟩ := capture_unbound_lookup e env m m' env' n hunb hrun (heap'.bind env.scope n a)
+  rw [lookupEnv_of_not_snap _ env' n hnone, hscope]
+  exact Heap.lookup_bind_self heap' env.scope n a hs
+
+/-- 3. 後からさらに再束縛しても、最新の束縛（`b`）が見える。 -/
+theorem forward_ref_rebound (e : Expr) (env : Env) (m m' : Machine) (env' : Env) (n : String)
+    (a b : Addr) (hunb : lookupEnv m.heap env n = none)
+    (hrun : ((capture e env).run).run m = (Except.ok env', m'))
+    (heap' : Heap) (hs : env.scope < heap'.scopes.size) :
+    lookupEnv ((heap'.bind env.scope n a).bind env.scope n b) env' n = some b := by
+  obtain ⟨hnone, hscope, _⟩ :=
+    capture_unbound_lookup e env m m' env' n hunb hrun ((heap'.bind env.scope n a).bind env.scope n b)
+  rw [lookupEnv_of_not_snap _ env' n hnone, hscope]
+  exact Heap.lookup_rebind heap' env.scope n a b hs
+
+/-- 解決できること（アドレスが返る）と、そのアドレスが有効な Cell を指すことは別。
+    束縛するアドレス `a` が有効なら、`bind` の後も有効で、Cell も `bind` では変わらない。 -/
+theorem forward_ref_cell (heap' : Heap) (s : ScopeId) (n : String) (a : Addr)
+    (ha : heap'.ValidAddr a) :
+    (heap'.bind s n a).ValidAddr a ∧ (heap'.bind s n a).cell? a = heap'.cell? a :=
+  ⟨Heap.bind_validAddr heap' s n a ha, Heap.bind_cell? heap' s n a a⟩
+
 end Les.Eval

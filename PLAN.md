@@ -1,6 +1,6 @@
 # 計画: les の観測意味論から Lean 形式化へ
 
-> **2026-11-15 改訂:** 当初 P2 に置いた機能追加よりも、P1 で動いた小さな評価器に対する形式的な証明を優先した。旧計画はこの改訂の履歴として明記する。P0〜P1 は完了、P2a〜P2d-4 は main に反映済み。P2d-5 の統合定理は [PR #19](https://github.com/gotoken/les-spec/pull/19) で証明・レビューされており、改訂時点では**未マージ**。到達点の詳しい範囲は [P0〜P2d-5 成果と証明の適用範囲](docs/proof-coverage.md) を参照。
+> **2026-11-15 改訂:** 当初 P2 に置いた機能追加よりも、P1 で動いた小さな評価器に対する形式的な証明を優先した。旧計画はこの改訂の履歴として明記する。P0〜P2d-5 は main に反映済み（統合定理の [PR #19](https://github.com/gotoken/les-spec/pull/19) もマージ済み）。[PR #20](https://github.com/gotoken/les-spec/pull/20) で非空虚性を示す証人を追加したが、こちらはまだ未マージ。到達点の詳しい範囲は [P0〜P2d-5 成果と証明の適用範囲](docs/proof-coverage.md) を参照。
 
 ## 計画変更の履歴と理由
 
@@ -64,15 +64,15 @@ Lean 側は `Expr` / `Value` / `Env` / `Heap` / `Outcome` など必要最小限�
 | P2d-1 | `Heap.StructWF` と基本操作による保存性（Cell 内部参照は含まない） | main 反映済み（[PR #15](https://github.com/gotoken/les-spec/pull/15)） |
 | P2d-2/3 | `Mono` の合成補題、11相互再帰関数の fuel 帰納法、`demand_mono` / `demand_validAddr` | main 反映済み（[PR #16](https://github.com/gotoken/les-spec/pull/16)、[PR #17](https://github.com/gotoken/les-spec/pull/17)） |
 | P2d-4 | `demand` 終了後の有効アドレスを導出し、`hvalid` 仮定を除去 | main 反映済み（[PR #18](https://github.com/gotoken/les-spec/pull/18)） |
-| P2d-5 | 初回強制の成功・`done` メモ化・再強制の安定性を `whnf_suspended_ok_memo` に統合 | **[PR #19](https://github.com/gotoken/les-spec/pull/19) は未マージ（改訂時）** |
+| P2d-5 | 初回強制の成功・`done` メモ化・再強制の安定性を `whnf_suspended_ok_memo` に統合 | main 反映済み（[PR #19](https://github.com/gotoken/les-spec/pull/19)） |
 
 P2 の完了を主張する際には **`docs/proof-coverage.md` の適用範囲と未証明事項を添える**。特に、`demand` の成功そのもの、失敗後のメモ化、`Cell` 内部参照の完全整合性、Go / Lean の同値性は未証明。
 
 ### P2 の振り返り・監査（次の作業候補、未着手）
 
-1. P2d-5 の `h`・`hd` を同時に満たす**具体例を Lean 上で構成し、非空虚性**を確認する。
+1. P2d-5 の `h`・`hd` を同時に満たす**具体的な証人**を [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) に追加した（PR #20）。**Lean のビルド・公理確認はマージ前に実施する**。
 2. E1〜E22 のどの規則がオラクルで観測されたか、どこが Lean の全称定理になったかを点検する（[成果文書](docs/proof-coverage.md)）。
-3. PR #19 のマージ後に fresh clone でビルド、35件比較、41件個別テスト、`#print axioms` を再確認する。
+3. PR #19 はマージ済み。PR #20 の非空虚性証明も含めて fresh clone でビルド、35件比較、41件個別テスト、`#print axioms` を再確認する。
 4. 次の証明対象として、失敗時の Thunk / blackhole の状態、Cell 内部参照の整合性と評価器による保存性を検討する。
 
 この節は**候補であり作業着手の指示ではない**。次に何を行うかはレビュー後に決める。

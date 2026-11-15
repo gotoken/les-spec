@@ -1,0 +1,10 @@
+def g(): Int:
+    print "side;"
+    1
+
+def twice(a: Int): Int:
+    a + a
+
+n = g()
+print twice(n)
+print n

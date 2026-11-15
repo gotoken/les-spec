@@ -1,0 +1,9 @@
+def a(): Int:
+    print "a;"
+    1
+
+def b(): Int:
+    print "b;"
+    2
+
+print a(), b()

@@ -1,0 +1,7 @@
+x = 1
+
+def f(): Int:
+    x = 2
+    x
+
+print f(), ";", x

@@ -1,0 +1,5 @@
+def k(a: Int): Int:
+    1
+
+n = 1 / 0
+print k(n)

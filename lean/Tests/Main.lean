@@ -90,6 +90,20 @@ def main (args : List String) : IO UInt32 := do
     t.check "memo-binding: g has a side effect, x = g()" true
   | _ => t.check "memo-binding: g has a side effect, x = g()" false
 
+  -- P1c-3（追加分）の AST の形: 評価順・関数スコープ・識別子だけの文
+  match get "order-binary-operands.json" with
+  | some { body := [_, _, .expr _ (.call _ (.ident _ "print") [.binary _ "+" (.call _ (.ident _ "a") []) (.call _ (.ident _ "b") [])])], .. } =>
+    t.check "order-binary-operands: print (a() + b())" true
+  | _ => t.check "order-binary-operands: print (a() + b())" false
+  match get "live-global-in-function.json" with
+  | some { body := [.varDecl _ "y" "" (.int _ 3), .funcDef _ "f" [] "Int" [.expr _ (.ident _ "y")], _, .varDecl _ "y" "" (.int _ 4), _], .. } =>
+    t.check "live-global-in-function: y rebound after def f" true
+  | _ => t.check "live-global-in-function: y rebound after def f" false
+  match get "ident-stmt-forces.json" with
+  | some { body := [.varDecl _ "n" "" (.binary _ "/" (.int _ 1) (.int _ 0)), .expr _ (.ident _ "n"), _], .. } =>
+    t.check "ident-stmt-forces: bare identifier statement" true
+  | _ => t.check "ident-stmt-forces: bare identifier statement" false
+
   -- 整数は int64 に制約されない
   let big := okProgram ("[{\"kind\":\"ExprStmt\"," ++ p11 ++ ",\"expr\":{\"kind\":\"Int\"," ++ p11 ++ ",\"value\":123456789012345678901234567890}}]")
   match decodeProgramString big with

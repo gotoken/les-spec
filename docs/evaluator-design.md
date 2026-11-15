@@ -21,7 +21,7 @@
 | ID | 規則 | 最小再現（観測） | 根拠 |
 |---|---|---|---|
 | E1 | 変数束縛は右辺が **リテラルでも Force でもなければ**未評価 Thunk を作る。評価されなければエラーも出ない | `x = 1 / 0`⏎`print "ok"` → `ok`、exit 0 | CLI（`lazy-unused-binding`）、ソース: `evalStmt` の `VarDecl` |
-| E2 | 要求時評価: 変数の**参照そのもの**は評価しない（Thunk のまま返す）。`print` / 算術 / `exit` などが値を要求した時だけ評価する | `v = id(1 / 0)`⏎`print "after;"`⏎`print v`（`id(a) = a`）→ stdout `after;`、`print v` で division by zero | CLI、ソース: `evalExpr` の `Identifier`（`env.Get` の結果をそのまま返す） |
+| E2 | 要求時評価: 式としての変数の**参照そのもの**は評価しない（Thunk のまま返す）。`print` / 算術 / `exit` などが値を要求した時だけ評価する。**観測上は E1（遅延束縛）・E11（識別子の引数）と区別できない**（2.1 節末の注）。例外は**識別子だけの文**で、これは強制する（E22） | `v = id(1 / 0)`⏎`print "after;"`⏎`print v`（`id(a) = a`）→ stdout `after;`、`print v` で division by zero | CLI、ソース: `evalExpr` の `Identifier`（`env.Get` の結果をそのまま返す）。コーパス: `alias-binding-not-forced`（E1 と E2 を合わせた確認） |
 | E3 | **再束縛**（同じスコープに既にある名前への `x = ...`）は右辺を**その場で強制評価**し、評価済みの値で置き換える。遅延させない | `x = 1`⏎`x = 1 / 0`⏎`print "ok"` → エラー（`:2: division by zero at col 7`）、exit 1、stdout 空。対照: 初回束縛 `x = 1 / 0` はエラーにならない | CLI、ソース: `VarDecl` の `if _, ok := env.store[s.Name]` 分岐（コメント: 循環参照を避けるため） |
 | E4 | 再束縛の右辺は**古い束縛**を参照できる | `x = 1`⏎`x = x + 1`⏎`print x` → `2`。`x = 5`⏎`x = x + 1`⏎`x = x * 2` → `12` | CLI |
 | E5 | 再束縛されなかった古い Thunk は評価されない | `x = 1 / 0`⏎`x = 2`⏎`print x` → `2`、exit 0 | CLI |
@@ -30,21 +30,24 @@
 | E8 | 通常の遅延束縛と明示 force の違いは「いつ評価されるか」だけ。結果の値は同じ | `a = (10 + 20)!` と `b = (10 + 20)` はどちらも `30` | CLI（`force-basic`） |
 | E9 | **Thunk は共有・メモ化される**: 同じ Thunk を何度要求しても副作用は 1 回 | `def g(): Int: print "side;"; 1` に対し `x = g()`⏎`print "before;"`⏎`print x`⏎`print x` → `before;side;11` | CLI（Thunk が評価結果を保存する `Force` のソースとも一致） |
 | E10 | 引数は未評価 Thunk（by need）で渡り、仮引数と呼び出し側で**共有**される。引数の副作用は 1 回 | `twice(a) = a + a` に `twice(g())` → `side;2` | CLI |
-| E11 | 引数がリテラルなら評価済みの値、識別子なら**既存の束縛そのもの**（新しい Thunk を作らない）、force なら強制評価結果、それ以外は未評価 Thunk | `n = 1 / 0`⏎`f(n)`（本体 `1`）→ `1`、エラーなし | CLI（`t31`）、ソース: `CallExpr` / `newCapturedThunk` |
-| E12 | 呼び出し（`def`）の評価: 呼び出し元に関係なく、**定義時のスコープ（生きたもの）**の子スコープを作り、仮引数を束縛して本体を実行する。本体の値は**最後の式文の値**（文が無い・束縛だけなら空タプル）で、**未評価の Thunk のまま**返りうる | `v = id(1 / 0)` は呼び出しではエラーにならない（E2 の再現と同じ）。`y = 3`⏎`f()`（本体 `y`）→ `3`、`y = 4` の後は `4` | CLI、ソース: `invokeClosure` / `evalBlock` |
-| E13 | 関数本体のスコープは定義時のグローバルスコープを**参照し続ける**。後からの再束縛は見える | 上の `f()` が `3` → `4` | CLI（`t19`） |
+| E11 | 引数がリテラルなら評価済みの値、識別子なら**既存の束縛そのもの**（新しい Thunk を作らない）、force なら強制評価結果、それ以外は未評価 Thunk | `n = 1 / 0`⏎`f(n)`（本体 `1`）→ `1`、エラーなし | CLI（`t31`）、ソース: `CallExpr` / `newCapturedThunk`。コーパス: `ident-arg-not-forced`（呼び出し時に強制しない）、`ident-arg-shares-cell`（呼び先で強制した結果が呼び出し側の束縛と共有される: `side;21`） |
+| E12 | 呼び出し（`def`）の評価: 呼び出し元に関係なく、**定義時のスコープ（生きたもの）**の子スコープを作り、仮引数を束縛して本体を実行する。本体の文は**順に全部実行**され、値は**最後の式文の値**（式文が無ければ空タプル）。この 9 ノードの範囲では、戻り値は**常に評価済み**（識別子だけの文は強制する: E22。その他の式は即座に値になる）。ソース上は `evalExpr(Identifier)` が未評価 Thunk を返しうるが、この範囲では観測できない | `v = id(1 / 0)` は呼び出しではエラーにならない（束縛が遅延なので呼び出し自体が実行されない）。関数内の `x = 2` は局所束縛で外の `x` は変わらない（`x = 1`、`def f(): Int: x = 2; x`、`print f(), ";", x` → `2;1`）。本体の文は全部実行され値は最後の式文（`print "a;"`、`2`、`print "b;"`、`3` の本体 → `a;b;3`） | CLI、ソース: `invokeClosure` / `evalBlock`。コーパス: `call-local-rebind`, `call-body-last-value` |
+| E13 | 関数本体のスコープは定義時のグローバルスコープを**参照し続ける**。後からの再束縛は見える | `y = 3`⏎`def f(): Int: y`⏎`print f(), ";"`⏎`y = 4`⏎`print f()` → `3;4`（定義時のスナップショットなら `3;3`） | CLI（`t19`）、コーパス: `live-global-in-function` |
 | E14 | Thunk は**作った時点で見えていた束縛をスナップショット**する（参照する名前だけをコピー。値は不変なので参照のコピーで足りる）。作った後の再束縛は、その Thunk からは見えない | `a = 1`⏎`b = a + 1`⏎`a = 10`⏎`print b` → `2` | CLI、ソース: `capture.go` の `captureEnv` |
 | E15 | スナップショットに**含まれなかった名前**（作った時点で未束縛）は、**評価時**にスコープから引かれる。前方参照が効き、評価時点の最新の束縛が見える | `b = a + 1`⏎`a = 5`⏎`print b` → `6`。`b = a + 1`⏎`a = 5`⏎`a = 7`⏎`print b` → `8` | CLI（`t6`, `t18`）、ソース: `captureEnv` の「未束縛の名前は親に任せる」 |
 | E16 | 評価中の Thunk を再び要求すると**ブラックホール**: 実行時エラー `blackhole: circular reference detected in lazy thunk`（位置情報なし）、exit 1。それまでの出力は残る | `x = x + 1`⏎`print "ok"`⏎`print x` → stdout `ok`、stderr `Runtime Error: blackhole: …` | CLI（`t5`）、ソース: `Force` |
-| E17 | 算術 `+ - * /`（Int）は**両オペランドを左から右へ強制**してから計算する。Int は任意精度（Go は `big.Int`） | `print 1, g()` は `g;11`（`g` の副作用が `print` の出力より先） | CLI、ソース: `evalExpr` の `BinaryExpr` |
+| E17 | 算術 `+ - * /`（Int）は**両オペランドを左から右へ強制**してから計算する。Int は任意精度（Go は `big.Int`） | `print 1, g()` は `g;11`（`g` の副作用が `print` の出力より先） | CLI、ソース: `evalExpr` の `BinaryExpr`。コーパス: `order-binary-operands`（算術）、`order-print-args`（`print` は全引数を左から強制してから書き出す）、`order-binary-abort`（左が失敗したら右は評価されない） |
 | E18 | `n / 0` は `division by zero`。`7 / 2 = 3` | `print 7 / 2` → `3` | CLI |
 | E19 | `print` は**全引数を左から右へ強制**し、連結して**末尾改行なし**で書き出し、即座にフラッシュする。値は空タプル | `print "a"`⏎`print 1 / 0` → stdout `a` が**残り**、exit 1 | CLI、ソース: `registerBuiltins` の `print`（`Flush` を呼ぶ） |
 | E20 | `exit(n)` は引数を強制して終了コードにする（`Int` / `Bool`）。**要求された時点で**終了する（束縛だけでは終了しない）。それまでの出力は残る | `x = exit(7)`⏎`print "a"`⏎`print x` → stdout `a`、exit 7 | CLI、ソース: `ExitError` |
 | E21 | **エラー位置**: 実行時エラーのメッセージは `<file>:<行>: <メッセージ> at col <列>`。位置は、エラーが起きた時に**強制中だった最も内側の Thunk（`Force` する式）の位置**、そのような式が無ければ**囲む文の先頭位置**。二項式の位置は演算子の位置 | `print 5 + (1 / 0)` → col 14（`/`）。裸の文 `1 / 0` → col 1（文頭）。関数本体の裸の `1 / 0` → `:2:` col 5（文頭） | CLI（`t27`〜`t30`、corpus の 4 件）、ソース: `FormatRuntimeError` と `Force` |
+| E22 | **識別子だけの式文は変数を強制する**。値が関数（`def` / 組込み）なら**0 引数で呼び出す**。それ以外は強制した値が文の値 | `n = 1 / 0`⏎`n`⏎`print "ok"` → exit 1、`:1: division by zero at col 7`（`n` の Thunk の位置）。`def hello(): Int: print "hi;"; 1`⏎`hello`⏎`print "end"` → `hi;end` | CLI（コーパス: `ident-stmt-forces`, `ident-stmt-calls-function`）、ソース: `evalStmt` の `ExprStmt`（`isCallableTarget` で `Force`）。組込みの 0 引数呼び出し（`print` だけの文など）は未観測 |
+
+**E2 と E12 の観測上の限界（P1c-3 の追加検証）**: E2（式としての変数参照は強制しない）の効果が出るのは、参照が遅延位置（束縛の右辺、識別子の引数）に現れる場合だけで、その結果は E1（右辺を遅延させる）と E11（識別子の引数は既存の束縛）が既に与える。強い位置（算術・`print` の引数）では消費側が強制するので、「参照が強制する」実装と区別できない。したがって E2 を**独立した規則として実証したとは主張しない**（`alias-binding-not-forced` は E1 と E2 を合わせた確認）。唯一の例外が識別子だけの式文で、これは強制する（E22）。同じ理由で、E12 の「未評価の Thunk のまま返りうる」は 9 ノードの範囲では観測できない: 関数の最後の式文が識別子なら E22 で強制され、他の式（算術・呼び出し・リテラル・`force`）は即座に値になるため、戻り値は常に評価済みである。遅延した戻り値を区別する例は、この範囲には無い。
 
 ### 2.2 未確定（今回の設計では扱わない／仮置き）
 
-- **ExprStmt が識別子 1 つだけで、それが関数の場合は 0 引数で自動呼び出しされる**（`evalStmt` の `isCallableTarget`）。コーパスの範囲（`first` のような Int 引数）では起きないので、最初は未実装として明示的に `Halt.error` にする。
+- 識別子だけの式文が**組込み**（`print` / `exit` の 0 引数呼び出し）のときの挙動は未観測。`def` の 0 引数呼び出しと強制は E22 として確認済み。最初の実装では、組込みの 0 引数呼び出しは明示的に `Halt.error "unsupported"` にする。
 - Int の `/` の負数の丸め、オーバーフロー以外の例外、`+` の String への適用などの型依存の演算: 未観測。実装時は Int×Int のみ対応し、他は `Halt.error "unsupported"`。
 - `referencedNames`（スナップショットに入れる名前）は Go では**過大近似**（入れ子のラムダの束縛名なども含む）。観測可能な違いが出る例は見つかっていない。Lean では自由変数の過大近似なら何でもよいとし、細部は一致させない。
 - 型情報（`InferredType`）が評価結果に影響する箇所（`print` の `Show` チェックなど）は、型検査済みなら起きないという前提。9 ノード・golden の範囲では結果に影響しないが、一般には**未検証**。
@@ -170,7 +173,8 @@ end Les.Eval
   4. それ以外: `suspended rhs (capture rhs scope)` を束縛（E1）。
   再束縛の判定は**そのスコープだけ**（親スコープは見ない。Go の `env.store`）。親にしか無い名前への `x = ...` は新しい局所束縛を作り、親は変わらない（確認済み（CLI）: `x = 1`⏎`def f(): Int: x = 2; x`⏎`print f(), ";", x` → `2;1`）。
 - `FuncDef n params ret body`: `done (closure params body scope)` を束縛。型注釈は無視（1 節）。
-- `ExprStmt e`: `evalE e`。値（Cell のまま）を文の値とする。識別子だけの文が関数のときの自動呼び出しは**未対応**（2.2）。
+- `ExprStmt (Ident n)`（E22）: `evalE` で Cell を得て **`whnf` で強制する**（エラーはここで出る）。値が `closure` なら 0 引数で呼び出し、その結果を文の値とする。それ以外（`int` / `str` / `unit`）は強制した Cell が文の値。組込みの 0 引数呼び出しは未対応（2.2）。
+- `ExprStmt e`（`e` が識別子以外）: `evalE e` の Cell を文の値とする。
 
 ブロックの値は、値を返した最後の `ExprStmt` の Cell。1 つも無ければ `unit`（E12）。トップレベルは全文を実行し、`Halt` が出たら止める。
 
@@ -233,11 +237,11 @@ end Les.Eval
 
 | ケース | 使う規則 |
 |---|---|
-| `lazy-unused` | E10, E12 |
-| `force-postfix-unused-arg` | E6, E10, E21 |
-| `force-prefix-unused-arg` | E6, E10, E21 |
+| `lazy-unused` | E10, E12, E22 |
+| `force-postfix-unused-arg` | E6, E10, E21, E22 |
+| `force-prefix-unused-arg` | E6, E10, E21, E22 |
 
-**golden に無い規則（段階 C）**: 再束縛（E3〜E5）、スナップショットと前方参照（E14, E15）、メモ化と共有（E9, E10）、ブラックホール（E16）、関数本体からのグローバル参照（E13）、`exit` の遅延（E20）、エラー位置の一般則（E21）は、現在の golden では**ほとんど検証されない**。2.1 の最小再現を `difftest/corpus/` に型注釈付きで足す（`lesdump` の 9 ノードに収まる）。**E3〜E5, E9, E10, E14〜E16, E19〜E21 は P1c-3 で 12 件を追加済み**（対応表は `difftest/corpus/README.md`）。E11〜E13, E17, E18 はまだコーパスに無い。これを足さないと、この設計の中核（Heap・スコープ・snap）が正しいかどうかを Go との比較で確かめられない。
+**golden に無い規則（段階 C）**: 再束縛（E3〜E5）、スナップショットと前方参照（E14, E15）、メモ化と共有（E9, E10）、ブラックホール（E16）、関数本体からのグローバル参照（E13）、`exit` の遅延（E20）、エラー位置の一般則（E21）は、現在の golden では**ほとんど検証されない**。2.1 の最小再現を `difftest/corpus/` に型注釈付きで足す（`lesdump` の 9 ノードに収まる）。**E3〜E5, E9, E10, E14〜E16, E19〜E21 は P1c-3 で 12 件、E11〜E13, E17, E22（と E1・E2 の合わせた確認）は同じ PR の追加で 11 件を追加済み**（対応表は `difftest/corpus/README.md`）。**E18 の「`n / 0` は division by zero」は既存の `div-zero-control` が検証している**。コーパスに無いのは E18 の `7 / 2 = 3`（Int の除算の値）、負数の丸め、E2 の独立した確認（上の注のとおり区別できない）。これを足さないと、この設計の中核（Heap・スコープ・snap）が正しいかどうかを Go との比較で確かめられない。
 
 ## 7. 設計判断とその根拠
 

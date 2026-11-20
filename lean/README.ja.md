@@ -1,11 +1,13 @@
 # Lean の実装・証明構成（P2d-5 時点）
 
+[English](README.md) | 日本語
+
 このディレクトリには、[`unak/les`](https://github.com/unak/les) の固定コミットを対象にした
 **限定的な実行可能評価器**と、その評価器の定義に対する Lean の証明がある。
 P0 当時の「足場のみ」「評価器・定理は後で実装」という記述は現在には当てはまらない。
 
 成果の適用範囲、証明済み／未証明の区別、E1〜E22 の対応表は
-[`docs/proof-coverage.md`](../docs/proof-coverage.md) を参照。
+[`docs/proof-coverage.ja.md`](../docs/proof-coverage.ja.md) を参照。
 
 ## 現在のファイル構成
 

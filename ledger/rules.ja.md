@@ -1,5 +1,7 @@
 # 規則の台帳
 
+[English](rules.md) | 日本語
+
 状態: `仮説` / `Go CLI 観測済み` / `Lean 比較済み` / `未解決`。
 **固定 SHA:** `upstream/LES_COMMIT` を参照。テスト一つで一般化しない。
 

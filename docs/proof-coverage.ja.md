@@ -1,5 +1,7 @@
 # P0〜P2d-5 成果と証明の適用範囲
 
+[English](proof-coverage.md) | 日本語
+
 2026-11-15 時点の中間報告。対象は [`unak/les`](https://github.com/unak/les) の固定コミット `aa78fdcfc76b156e6b5ab4735516fcefadce954b`（[`upstream/LES_COMMIT`](../upstream/LES_COMMIT)）。
 
 **この文書の結論:** Go CLI の観測から9種類の構文ノードに絞った Lean 実行可能評価器を作り、35件のプログラムで stdout・stderr・終了コードを期待値と照合した。さらに、その**Lean モデルについて**、Heap の基本性質、名前解決、Cell 数の非減少性、成功した初回強制のメモ化と再強制の安定性を証明した。**Go 実装と Lean モデルの一般的な同値性は未証明**である。
@@ -13,7 +15,7 @@
 | P0 | Go CLI の対象コミット固定、オラクル5件の実行、Lean 4.25.0 / Lake 5.0.0 の足場 | [P0](../tasks/results/P0.md) |
 | P1a | 遅延評価と明示的 `force` / `!` の対照実験。stderr のパス正規化と厳密比較 | [P1a](../tasks/results/P1a.md) |
 | P1b | upstream の Go パーサー・型解析を再利用する `lesdump`。JSON AST の固定形式 | [P1b](../tasks/results/P1b.md) |
-| P1c-1〜3 | Lean AST/JSON デコーダー、評価器設計、E1〜E22 の観測規則、Go CLI コーパス33件 | [設計メモ](evaluator-design.md)、[P1c-3](../tasks/results/P1c-3.md) |
+| P1c-1〜3 | Lean AST/JSON デコーダー、評価器設計、E1〜E22 の観測規則、Go CLI コーパス33件 | [設計メモ](evaluator-design.ja.md)、[P1c-3](../tasks/results/P1c-3.md) |
 | P1c-4〜6 | fuel 付き Lean 評価器。`def`、closure、Thunk の共有、環境捕捉を追加し、コーパス35件・個別41件を通過 | [P1c-5](../tasks/results/P1c-5.md)、[P1c-6](../tasks/results/P1c-6.md) |
 | P2a〜P2c | Heap 操作・メモ化・環境捕捉と前方参照に関する定理群 | [`lean/Les/Proofs/`](../lean/Les/Proofs/) |
 | P2d-1〜4 | 構造的 Heap 整合性、評価器の Cell 数単調性、初回強制後のアドレス有効性の導出 | [P2d-3](../tasks/results/P2d-3.md)、[P2d-4](../tasks/results/P2d-4.md) |
@@ -38,7 +40,7 @@
 
 ## 2. 言語規則 E1〜E22 と形式的保証の境界
 
-凡例：**観測**は固定 Go CLI や `lesdump` の確認、**実行照合**は対応する限定構文で Lean 実行結果を期待値と比較したこと、**直接の定理**は挙動の一部を Lean の全称命題として証明したことを指す。同じ ID に「定理あり」としても、その規則の全側面が証明されたわけではない。元の規則の正確な範囲・再現例は [評価器設計メモ](evaluator-design.md) と [コーパス対応表](../difftest/corpus/README.md) を参照。
+凡例：**観測**は固定 Go CLI や `lesdump` の確認、**実行照合**は対応する限定構文で Lean 実行結果を期待値と比較したこと、**直接の定理**は挙動の一部を Lean の全称命題として証明したことを指す。同じ ID に「定理あり」としても、その規則の全側面が証明されたわけではない。元の規則の正確な範囲・再現例は [評価器設計メモ](evaluator-design.ja.md) と [コーパス対応表](../difftest/corpus/README.ja.md) を参照。
 
 | 規則 | 観測・実行照合の対象（部分言語） | Lean の直接の証明と残る境界 |
 |---|---|---|
@@ -158,7 +160,7 @@ P2c の環境捕捉と P2d のアドレス有効性は、現時点では**別の
 
 ## 6. 計画変更と再現手順への入口
 
-当初の [`PLAN.md`](../PLAN.md) は「P2=機能拡張、P4=定理」を想定していた。実際には、P1 で限定的ながら実行可能なモデルと35件のオラクル比較が揃ったため、**そのモデルを凍結して中核の定理を先に証明する**順序へ変更した。理由と新旧対応は更新後の [PLAN.md](../PLAN.md) を参照。
+当初の [`PLAN.ja.md`](../PLAN.ja.md) は「P2=機能拡張、P4=定理」を想定していた。実際には、P1 で限定的ながら実行可能なモデルと35件のオラクル比較が揃ったため、**そのモデルを凍結して中核の定理を先に証明する**順序へ変更した。理由と新旧対応は更新後の [PLAN.ja.md](../PLAN.ja.md) を参照。
 
 ~~~sh
 bash scripts/bootstrap.sh

@@ -1,5 +1,7 @@
 # Go オラクル検証
 
+[English](README.md) | 日本語
+
 `difftest/run.py` は固定コミットの Go CLI を実行し、`corpus/*.les` と同名の `*.expect.json` に基づいて stdout と終了コードを比較する。stderr は記録するが、期待値に `stderr` が指定された場合だけ厳密比較する。**Lean の差分テストは未実装**。
 
 ```sh

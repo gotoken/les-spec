@@ -1,5 +1,7 @@
 # Lean 評価器の設計メモ（P1c-2）
 
+[English](evaluator-design.md) | 日本語
+
 状態: **設計のみ**。実装コード・証明・対応構文の追加は含まない。固定 upstream は `upstream/LES_COMMIT`（`aa78fdcf…`）。
 ここでの「確認済み（CLI）」は固定コミットの Go CLI を実際に実行した観測、「確認済み（ソース）」は `.work/upstream-les/pkg/eval/` を局所的に読んだ結果、「未確定」はどちらでも確かめていないことを指す。
 

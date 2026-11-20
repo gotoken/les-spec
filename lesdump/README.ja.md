@@ -1,5 +1,7 @@
 # lesdump
 
+[English](README.md) | 日本語
+
 固定コミット（`upstream/LES_COMMIT`）の Go の `pkg/lexer` / `pkg/parser` / `pkg/types` を呼び出し、Lean に入力する**最小の AST JSON** を出力する。パーサーは独自実装していない。これは les の正式な言語仕様ではなく、現在の `difftest/corpus/` を扱うための暫定的な中間表現である。
 
 ```

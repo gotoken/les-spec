@@ -6,7 +6,7 @@ Interim report as of 2026-11-15. The target is [`unak/les`](https://github.com/u
 
 **Conclusion of this document:** From observations of the Go CLI, we built an executable Lean evaluator restricted to 9 syntax node kinds, and checked stdout, stderr, and exit code against expectations on 35 programs. Furthermore, **for that Lean model**, we proved basic Heap properties, name resolution, non-decrease of the number of cells, and memoization of a successful first force together with stability of re-forcing. **General equivalence between the Go implementation and the Lean model is not proved.**
 
-> **Merge status:** P0–P2d-5 (including [PR #19](https://github.com/gotoken/les-spec/pull/19)) are merged into main (P2d-5 merge commit `12e9af9`). This PR #20 adds a witness that actually satisfies the P2d-5 hypotheses in [`lean/Les/Proofs/NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean). This new proof is a change in this PR and is not yet on main.
+> **Merge status:** P0–P2d-5 (including [PR #19](https://github.com/gotoken/les-spec/pull/19)) are merged into main (P2d-5 merge commit `12e9af9`). [PR #20](https://github.com/gotoken/les-spec/pull/20) added a witness that actually satisfies the P2d-5 hypotheses in [`lean/Les/Proofs/NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean), and its initial build failure was fixed in [PR #22](https://github.com/gotoken/les-spec/pull/22). Both are merged into main (`43e8839`).
 
 ## 1. What was built and how far it works
 
@@ -111,7 +111,7 @@ With `m₃ := { m₂ with heap := m₂.heap.setCell a (.done v) }`, the conclusi
 
 **This witness confirms that "an example satisfying the conditions exists"; it is not a claim that every `demand` succeeds.** Also, `StructWF` is not full Heap well-formedness covering references inside cells.
 
-**Verification record (2026-11-15):** PR #20 had been merged into main, but the first `lake build` failed on the `rfl` of `memoWitness_demand_ok`. The fix is in [PR #22](https://github.com/gotoken/les-spec/pull/22), and `lake build` with Lean 4.25.0 succeeded in a [GitHub Actions run](https://github.com/gotoken/les-spec/actions/runs/43715079526). `#print axioms` for the new theorems shows only `propext` / `Quot.sound` (no `sorryAx`). This fix will be reflected on main after PR #22 is merged.
+**Verification record (2026-11-15):** PR #20 had been merged into main, but the first `lake build` failed on the `rfl` of `memoWitness_demand_ok`. The fix is in [PR #22](https://github.com/gotoken/les-spec/pull/22), and `lake build` with Lean 4.25.0 succeeded in a [GitHub Actions run](https://github.com/gotoken/les-spec/actions/runs/43715079526). `#print axioms` for the new theorems shows only `propext` / `Quot.sound` (no `sorryAx`). PR #22 was merged into main on 2026-11-15, and [CI on main](https://github.com/gotoken/les-spec/actions/runs/43715625663) for the merge commit `43e8839` also succeeded.
 
 ## 4. Dependencies
 
@@ -151,7 +151,7 @@ Environment capture in P2c and address validity in P2d are currently proved as *
 
 1. **Non-vacuity (witness added, fixed in PR #22):** Constructed in [`NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) a concrete `Machine` / `Expr` / `Env` / fuel that simultaneously satisfies the P2d-5 hypotheses `h` and `hd`. The original `rfl` failure was fixed in PR #22, and CI confirmed Lean compilation and `#print axioms`.
 2. **Checking correspondences:** When temporary semantic modifications are made to the evaluator, check where the corresponding differential tests or theorems detect them. Also check that the hypotheses of the proofs have not become trivial.
-3. **Reproducibility of the theorems:** PR #19 / #20 are merged into main. Using the PR #22 fix branch, `lake build`, the 35 comparisons and unit tests, and `#print axioms` succeeded with Lean 4.25.0 on GitHub Actions. Reproduction from a fresh local clone and running the Go CLI oracle will be confirmed separately.
+3. **Reproducibility of the theorems:** PR #19 / #20 / #22 are merged into main. A [GitHub Actions run](https://github.com/gotoken/les-spec/actions/runs/43715625663) (Lean 4.25.0) on the main merge commit `43e8839` succeeded with `lake build`, the 35 comparisons and unit tests, and `#print axioms`. Reproduction from a fresh local clone and running the Go CLI oracle will be confirmed separately.
 
 ### Next semantic questions
 

@@ -6,7 +6,7 @@
 
 **この文書の結論:** Go CLI の観測から9種類の構文ノードに絞った Lean 実行可能評価器を作り、35件のプログラムで stdout・stderr・終了コードを期待値と照合した。さらに、その**Lean モデルについて**、Heap の基本性質、名前解決、Cell 数の非減少性、成功した初回強制のメモ化と再強制の安定性を証明した。**Go 実装と Lean モデルの一般的な同値性は未証明**である。
 
-> **マージ状況:** P0〜P2d-5（[PR #19](https://github.com/gotoken/les-spec/pull/19) を含む）は main にマージ済み（P2d-5 のマージコミット `12e9af9`）。本 PR #20 では P2d-5 の前提を実際に満たす証人を [`lean/Les/Proofs/NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) に追加した。この新規証明は本 PR の変更で、main には未反映。
+> **マージ状況:** P0〜P2d-5（[PR #19](https://github.com/gotoken/les-spec/pull/19) を含む）は main にマージ済み（P2d-5 のマージコミット `12e9af9`）。[PR #20](https://github.com/gotoken/les-spec/pull/20) で P2d-5 の前提を実際に満たす証人を [`lean/Les/Proofs/NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) に追加し、その初回ビルド失敗を [PR #22](https://github.com/gotoken/les-spec/pull/22) で修正した。どちらも main にマージ済み（`43e8839`）。
 
 ## 1. 何を作り、どこまで動いたか
 
@@ -109,7 +109,7 @@
 
 **この証人は「条件を満たす例が存在する」ことの確認であり、すべての `demand` が成功するという主張ではない。** また、`StructWF` は Cell 内部の参照までを含む完全な Heap 整合性ではない。
 
-**検証記録（2026-11-15）:** PR #20 は main にマージ済みだったが、初回の `lake build` は `memoWitness_demand_ok` の `rfl` が失敗した。修正は [PR #22](https://github.com/gotoken/les-spec/pull/22) にあり、[GitHub Actions 実行](https://github.com/gotoken/les-spec/actions/runs/43715079526) にて Lean 4.25.0 の `lake build` が成功した。新定理の `#print axioms` には `propext` / `Quot.sound` のみ（`sorryAx` なし）。この修正は PR #22 のマージ後に main に反映される。
+**検証記録（2026-11-15）:** PR #20 は main にマージ済みだったが、初回の `lake build` は `memoWitness_demand_ok` の `rfl` が失敗した。修正は [PR #22](https://github.com/gotoken/les-spec/pull/22) にあり、[GitHub Actions 実行](https://github.com/gotoken/les-spec/actions/runs/43715079526) にて Lean 4.25.0 の `lake build` が成功した。新定理の `#print axioms` には `propext` / `Quot.sound` のみ（`sorryAx` なし）。PR #22 は 2026-11-15 に main にマージされ、マージコミット `43e8839` に対する [main の CI](https://github.com/gotoken/les-spec/actions/runs/43715625663) も成功した。
 
 ## 4. 依存関係
 
@@ -149,7 +149,7 @@ P2c の環境捕捉と P2d のアドレス有効性は、現時点では**別の
 
 1. **非空虚性（証人を追加・PR #22 で修正済み）:** P2d-5 の前提 `h` と `hd` を同時に満たす具体的な `Machine` / `Expr` / `Env` / fuel を [`NonVacuity.lean`](../lean/Les/Proofs/NonVacuity.lean) に構成した。元の `rfl` の失敗を PR #22 で修正し、CI で Lean のコンパイルと `#print axioms` を確認した。
 2. **対応関係の検査:** 実行器に一時的な意味論の改変を加えた場合、対応する差分テストや定理がどこで検出するかを確認する。証明の前提が自明になっていないかも点検する。
-3. **定理の再現性:** PR #19 / #20 は main にマージ済み。PR #22 の修正ブランチを用いて GitHub Actions 上の Lean 4.25.0 で `lake build`、35件比較と個別テスト、`#print axioms` が成功した。ローカルでの fresh clone 再現と Go CLI のオラクル実行は別途確認する。
+3. **定理の再現性:** PR #19 / #20 / #22 は main にマージ済み。main のマージコミット `43e8839` に対する [GitHub Actions 実行](https://github.com/gotoken/les-spec/actions/runs/43715625663)（Lean 4.25.0）で `lake build`、35件比較と個別テスト、`#print axioms` が成功した。ローカルでの fresh clone 再現と Go CLI のオラクル実行は別途確認する。
 
 ### 意味論の次の問い
 

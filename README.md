@@ -15,7 +15,7 @@ This is not a line-by-line port of the Go implementation. We keep a clear distin
 - For a restricted syntax of 6 expression forms and 3 statement forms: **35 Go/Lean observation comparisons PASS** and **41 Lean unit tests PASS** (per the execution logs of each step)
 - Proofs about the Lean model: Heap operations, memoization of thunks, environment capture and forward references, structural Heap well-formedness, and monotonicity of the number of cells
 - Merged into main up to the P2d-5 integrated theorem on memoization after a successful force ([PR #19](https://github.com/gotoken/les-spec/pull/19))
-- [PR #20](https://github.com/gotoken/les-spec/pull/20) added non-vacuity theorems with a concrete witness in [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) (merged into main; the initial build failure was fixed in [PR #22](https://github.com/gotoken/les-spec/pull/22) and verified on CI)
+- [PR #20](https://github.com/gotoken/les-spec/pull/20) added non-vacuity theorems with a concrete witness in [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) (merged into main; the initial build failure was fixed in [PR #22](https://github.com/gotoken/les-spec/pull/22), also merged into main and verified by CI on main)
 
 See **[Results of P0–P2d-5 and proof coverage](docs/proof-coverage.md)** for details, and **[PLAN.md](PLAN.md)** for why the plan changed and the tentative next steps.
 
@@ -58,6 +58,6 @@ Fetching the Lean toolchain may be restricted in some environments. The workarou
 
 ## About the next steps
 
-The next language feature or proof target has not been decided yet. We will review the [results and proof coverage](docs/proof-coverage.md) and the P2d-5 non-vacuity proof, confirm the PR #22 fix and its CI results, and then decide on the next task.
+The next language feature or proof target has not been decided yet. We will review the [results and proof coverage](docs/proof-coverage.md) and the P2d-5 non-vacuity proof, and then decide on the next task.
 
 We do not start the next phase without approval; each task is executed, verified, recorded, and reviewed one at a time. Steps for which model usage could not be obtained are marked "not measured."

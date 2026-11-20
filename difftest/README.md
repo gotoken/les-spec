@@ -2,7 +2,7 @@
 
 English | [日本語](README.ja.md)
 
-`difftest/run.py` runs the Go CLI at the pinned commit and compares stdout and the exit code against the `*.expect.json` with the same name as each `corpus/*.les`. stderr is recorded, but compared exactly only when the expectation specifies `stderr`. **Lean differential tests are not implemented.**
+`difftest/run.py` runs the Go CLI at the pinned commit and compares stdout and the exit code against the `*.expect.json` with the same name as each `corpus/*.les`. stderr is recorded, but compared exactly only when the expectation specifies `stderr`. Comparison with the Lean evaluator is done not by `run.py` but by `lake exe les-eval-test`, using the same corpus and expectations (see [lean/README.md](../lean/README.md)).
 
 ```sh
 bash scripts/bootstrap.sh

@@ -2,7 +2,7 @@
 
 English | [日本語](PLAN.ja.md)
 
-> **Revised 2026-11-15:** We prioritized formal proofs about the small evaluator that worked in P1 over the feature additions originally planned for P2. The old plan is kept explicitly as the history of this revision. P0–P2d-5 are on main (including [PR #19](https://github.com/gotoken/les-spec/pull/19) with the integrated theorem). [PR #20](https://github.com/gotoken/les-spec/pull/20) is also merged into main; however, the first build revealed a problem in the proof, which was fixed in [PR #22](https://github.com/gotoken/les-spec/pull/22) (CI passing, not yet merged). See [Results of P0–P2d-5 and proof coverage](docs/proof-coverage.md) for the detailed scope of what has been achieved.
+> **Revised 2026-11-15:** We prioritized formal proofs about the small evaluator that worked in P1 over the feature additions originally planned for P2. The old plan is kept explicitly as the history of this revision. P0–P2d-5 are on main (including [PR #19](https://github.com/gotoken/les-spec/pull/19) with the integrated theorem). [PR #20](https://github.com/gotoken/les-spec/pull/20) is also merged into main; however, the first build revealed a problem in the proof, which was fixed in [PR #22](https://github.com/gotoken/les-spec/pull/22) and merged into main on 2026-11-15 (CI on main also passes). See [Results of P0–P2d-5 and proof coverage](docs/proof-coverage.md) for the detailed scope of what has been achieved.
 
 ## History of plan changes and reasons
 
@@ -74,7 +74,7 @@ When claiming P2 is complete, **attach the scope and unproved items from `docs/p
 
 1. Added a **concrete witness** simultaneously satisfying `h` and `hd` of P2d-5 to [`NonVacuity.lean`](lean/Les/Proofs/NonVacuity.lean) (PR #20). **The initial build failure was fixed in PR #22, and the build and axiom check succeeded on GitHub Actions.**
 2. Audit which of rules E1–E22 were observed with the oracle and which became universally quantified theorems in Lean ([results document](docs/proof-coverage.md)).
-3. PR #19 / #20 are merged. On the PR #22 fix branch, CI confirmed `lake build`, the 35 comparisons and unit tests, and `#print axioms`. Reproduction from a fresh local clone will be checked separately.
+3. PR #19 / #20 / #22 are merged. [CI](https://github.com/gotoken/les-spec/actions/runs/43715625663) on the main merge commit `43e8839` confirmed `lake build`, the 35 comparisons and unit tests, and `#print axioms`. Reproduction from a fresh local clone will be checked separately.
 4. As the next proof targets, consider the state of thunks / blackholes after failure, and well-formedness of references inside cells together with its preservation by the evaluator.
 
 This section lists **candidates, not instructions to start work**. What to do next will be decided after review.

@@ -2,7 +2,7 @@
 
 [English](README.md) | 日本語
 
-`difftest/run.py` は固定コミットの Go CLI を実行し、`corpus/*.les` と同名の `*.expect.json` に基づいて stdout と終了コードを比較する。stderr は記録するが、期待値に `stderr` が指定された場合だけ厳密比較する。**Lean の差分テストは未実装**。
+`difftest/run.py` は固定コミットの Go CLI を実行し、`corpus/*.les` と同名の `*.expect.json` に基づいて stdout と終了コードを比較する。stderr は記録するが、期待値に `stderr` が指定された場合だけ厳密比較する。Lean 評価器との比較は `run.py` ではなく、同じコーパスと期待値を使う `lake exe les-eval-test`（[lean/README.ja.md](../lean/README.ja.md)）で行う。
 
 ```sh
 bash scripts/bootstrap.sh
